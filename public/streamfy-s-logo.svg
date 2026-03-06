@@ -1,0 +1,35 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="goldMain" x1="128" y1="96" x2="380" y2="424" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFD777"/>
+      <stop offset="0.42" stop-color="#F4A30A"/>
+      <stop offset="1" stop-color="#B86A02"/>
+    </linearGradient>
+    <linearGradient id="goldSoft" x1="84" y1="78" x2="432" y2="438" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFE3A3"/>
+      <stop offset="0.48" stop-color="#F4A30A"/>
+      <stop offset="1" stop-color="#8E4E00"/>
+    </linearGradient>
+    <radialGradient id="goldGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(260 250) rotate(90) scale(220)">
+      <stop offset="0.65" stop-color="#F4A30A" stop-opacity="0"/>
+      <stop offset="1" stop-color="#F4A30A" stop-opacity="0.28"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="256" cy="256" r="206" fill="url(#goldGlow)"/>
+
+  <path
+    d="M113 170C152 106 222 74 301 82C354 87 401 112 437 153C445 162 444 175 435 182C426 189 413 188 405 179C373 143 333 123 287 118C221 112 164 136 132 189C127 198 116 201 107 196C98 191 96 180 102 171L113 170Z"
+    fill="url(#goldSoft)"
+  />
+
+  <path
+    d="M404 343C364 408 293 441 214 432C161 427 114 401 77 359C69 350 70 337 79 330C88 323 101 324 109 333C141 369 182 390 228 396C294 401 351 377 382 324C387 315 399 312 408 317C417 322 420 334 414 343H404Z"
+    fill="url(#goldSoft)"
+  />
+
+  <path
+    d="M286 113C326 113 358 145 358 183C358 191 352 197 344 198C335 199 327 194 324 186C316 164 300 152 277 152H258C224 152 196 176 196 204C196 226 214 241 247 252L286 265C338 281 369 315 369 359C369 406 329 442 274 442H245C197 442 157 410 149 366C147 357 153 349 162 348C171 346 179 352 182 361C188 385 212 402 241 402H260C296 402 327 381 327 355C327 333 309 318 274 307L236 294C184 278 154 244 154 201C154 152 195 113 251 113H286Z"
+    fill="url(#goldMain)"
+  />
+</svg>

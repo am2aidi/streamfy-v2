@@ -1,0 +1,14 @@
+
+> my-project@0.1.0 dev
+> next dev --hostname 127.0.0.1 --port 3000
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://127.0.0.1:3000
+- Network:       http://127.0.0.1:3000
+
+✓ Starting...
+Creating turbopack project {
+  dir: 'C:\\Users\\zaidi\\Downloads\\Compressed\\streamfy',
+  testMode: true
+}
+✓ Ready in 852ms

@@ -1,24 +1,30 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Upload } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useFilterOptions } from '@/lib/admin-filters'
+
+type MovieLanguage = 'en' | 'fr' | 'rw'
 
 const defaultRows = [
-  { title: 'Dark Pursuit', category: 'Thriller', quality: '4K', date: '2026-02-27', status: 'Active', poster: '' },
-  { title: 'KYLEXY', category: 'Sci-Fi', quality: 'HD', date: '2026-02-26', status: 'Draft', poster: '' },
-  { title: 'Top Rated', category: 'Drama', quality: '4K', date: '2026-02-21', status: 'Active', poster: '' },
+  { title: 'Dark Pursuit', category: 'Thriller', language: 'en' as MovieLanguage, quality: '4K', date: '2026-02-27', status: 'Active', poster: '' },
+  { title: 'KYLEXY', category: 'Sci-Fi', language: 'rw' as MovieLanguage, quality: 'HD', date: '2026-02-26', status: 'Draft', poster: '' },
+  { title: 'Top Rated', category: 'Drama', language: 'fr' as MovieLanguage, quality: '4K', date: '2026-02-21', status: 'Active', poster: '' },
 ]
 
 export default function AdminMoviesPage() {
   const { toast } = useToast()
+  const categoryOptions = useFilterOptions('movies')
   const [rows, setRows] = useState(defaultRows)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [languageFilter, setLanguageFilter] = useState<'All' | MovieLanguage>('All')
   const [editIndex, setEditIndex] = useState<number | null>(null)
   const [form, setForm] = useState({
     title: '',
     category: 'Action',
+    language: 'en' as MovieLanguage,
     quality: 'HD',
     status: 'Active',
     date: '2026-03-04',
@@ -27,7 +33,7 @@ export default function AdminMoviesPage() {
 
   const startAdd = () => {
     setEditIndex(null)
-    setForm({ title: '', category: 'Action', quality: 'HD', status: 'Active', date: '2026-03-04', poster: '' })
+    setForm({ title: '', category: 'Action', language: 'en', quality: 'HD', status: 'Active', date: '2026-03-04', poster: '' })
     setOpen(true)
   }
 
@@ -62,21 +68,41 @@ export default function AdminMoviesPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Movies Management</h2>
-        <button
-          onClick={startAdd}
-          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-black"
-          style={{ background: 'linear-gradient(to right, var(--admin-accent-a), var(--admin-accent-b))' }}
-        >
-          <Plus size={16} />
-          Add New Movie
-        </button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search..."
+            className="w-44 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none"
+          />
+          <select
+            value={languageFilter}
+            onChange={(e) => setLanguageFilter(e.target.value as typeof languageFilter)}
+            className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
+            aria-label="Language filter"
+          >
+            <option value="All">All languages</option>
+            <option value="en">English</option>
+            <option value="fr">Francais</option>
+            <option value="rw">Kinyarwanda</option>
+          </select>
+          <button
+            onClick={startAdd}
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-black"
+            style={{ background: 'linear-gradient(to right, var(--admin-accent-a), var(--admin-accent-b))' }}
+          >
+            <Plus size={16} />
+            Add New Movie
+          </button>
+        </div>
       </div>
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Filter by title, category, quality..."
-        className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm"
-      />
+      <div className="mb-3 flex flex-wrap gap-2">
+        {categoryOptions.map((category) => (
+          <span key={category} className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white">
+            {category}
+          </span>
+        ))}
+      </div>
 
       <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
         <div className="overflow-x-auto">
@@ -86,6 +112,7 @@ export default function AdminMoviesPage() {
                 <th className="px-4 py-3">Poster</th>
                 <th className="px-4 py-3">Title</th>
                 <th className="px-4 py-3">Category</th>
+                <th className="px-4 py-3">Language</th>
                 <th className="px-4 py-3">Quality</th>
                 <th className="px-4 py-3">Upload Date</th>
                 <th className="px-4 py-3">Status</th>
@@ -96,7 +123,9 @@ export default function AdminMoviesPage() {
               {rows
                 .filter((movie) => {
                   const q = query.trim().toLowerCase()
-                  return !q || [movie.title, movie.category, movie.quality, movie.status].join(' ').toLowerCase().includes(q)
+                  const byQuery = !q || [movie.title, movie.category, movie.language, movie.quality, movie.status].join(' ').toLowerCase().includes(q)
+                  const byLang = languageFilter === 'All' || movie.language === languageFilter
+                  return byQuery && byLang
                 })
                 .map((movie) => (
                 <tr key={movie.title} className="border-t border-white/10">
@@ -109,6 +138,7 @@ export default function AdminMoviesPage() {
                   </td>
                   <td className="px-4 py-3 font-medium">{movie.title}</td>
                   <td className="px-4 py-3 text-slate-300">{movie.category}</td>
+                  <td className="px-4 py-3 text-slate-300 uppercase">{movie.language}</td>
                   <td className="px-4 py-3 text-slate-300">{movie.quality}</td>
                   <td className="px-4 py-3 text-slate-400">{movie.date}</td>
                   <td className="px-4 py-3">
@@ -145,11 +175,14 @@ export default function AdminMoviesPage() {
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <input value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="Movie Title" className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
               <select value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm">
-                <option>Action</option>
-                <option>Comedy</option>
-                <option>Sci-Fi</option>
-                <option>Drama</option>
-                <option>Thriller</option>
+                {categoryOptions.map((category) => (
+                  <option key={category}>{category}</option>
+                ))}
+              </select>
+              <select value={form.language} onChange={(e) => setForm((p) => ({ ...p, language: e.target.value as MovieLanguage }))} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm">
+                <option value="en">English</option>
+                <option value="fr">Francais</option>
+                <option value="rw">Kinyarwanda</option>
               </select>
               <input value={form.poster} onChange={(e) => setForm((p) => ({ ...p, poster: e.target.value }))} placeholder="Poster URL (optional)" className="md:col-span-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
               <textarea placeholder="Description" className="md:col-span-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" rows={3} />

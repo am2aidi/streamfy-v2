@@ -2,6 +2,8 @@
 
 import { Play, ChevronRight } from 'lucide-react'
 import Image from 'next/image'
+import { useAppSettings } from '@/components/AppSettingsProvider'
+import { getTranslation } from '@/lib/translations'
 
 const clips = [
   { id: 1, title: 'NBA Highlights', image: '/nba-highlights.jpg' },
@@ -10,12 +12,15 @@ const clips = [
 ]
 
 export function ClipsSection() {
+  const { settings } = useAppSettings()
+  const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
+
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-white text-xl font-bold">Top Clips</h2>
+        <h2 className="text-white text-xl font-bold">{t('topClips')}</h2>
         <button className="flex items-center gap-1 text-[#f4a30a] text-sm hover:underline">
-          See All <ChevronRight size={14} />
+          {t('seeAll')} <ChevronRight size={14} />
         </button>
       </div>
 

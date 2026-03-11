@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Calendar, Clock3, Plus, Search, Trophy } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useFilterOptions } from '@/lib/admin-filters'
 
 type SportsRow = {
   sport: 'Football' | 'Basketball' | 'Volleyball'
@@ -25,7 +26,7 @@ const initialRows: SportsRow[] = [
   { sport: 'Volleyball', teamA: 'Poland', teamB: 'Brazil', league: 'Volleyball Nations League', date: '2026-03-12', status: 'Finished', stream: 'streamfy.live/vnl' },
 ]
 
-const leagueOptions = [
+const LEAGUE_PRESETS = [
   'Champions League',
   'Premier League',
   'La Liga',
@@ -84,6 +85,8 @@ export default function AdminSportsPage() {
     status: 'Upcoming',
     stream: '',
   })
+  const storedSportsFilters = useFilterOptions('sports')
+  const leagueOptions = useMemo(() => Array.from(new Set([...storedSportsFilters, ...LEAGUE_PRESETS])), [storedSportsFilters])
 
   useEffect(() => {
     setRows((prev) => normalizeRows(prev))

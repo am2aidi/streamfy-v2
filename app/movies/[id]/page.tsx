@@ -11,15 +11,19 @@ import { getMovieById, movieCards } from '@/lib/movies-data'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/components/AuthProvider'
 import { SocialShareLinks } from '@/components/SocialShareLinks'
+import { useAppSettings } from '@/components/AppSettingsProvider'
+import { getTranslation, type Language } from '@/lib/translations'
 
 export default function MovieDetailPage() {
   const params = useParams<{ id: string }>()
   const movie = useMemo(() => getMovieById(params.id), [params.id])
   const { toast } = useToast()
   const { requireAuth } = useAuth()
+  const { settings } = useAppSettings()
+  const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const [showWatch, setShowWatch] = useState(false)
   const [showDownload, setShowDownload] = useState(false)
-  const [subtitle, setSubtitle] = useState('English')
+  const [subtitle, setSubtitle] = useState<Language>('en')
   const [quality, setQuality] = useState('720p')
   const [volume, setVolume] = useState(80)
   const [progress, setProgress] = useState(38)
@@ -27,7 +31,7 @@ export default function MovieDetailPage() {
   if (!movie) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        Movie not found.
+        {t('movieNotFound')}
       </div>
     )
   }
@@ -36,17 +40,17 @@ export default function MovieDetailPage() {
     <div className="flex min-h-screen bg-black">
       <Sidebar />
 
-      <div className="ml-[220px] w-[calc(100vw-220px)] min-h-[100dvh] overflow-x-hidden pb-8">
+      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-8">
         <Header />
 
         <main className="px-6 flex flex-col gap-6">
           <Link href="/movies" className="inline-flex items-center gap-2 text-gray-300 hover:text-white text-sm">
             <ChevronLeft size={14} />
-            Back to Movies
+            {t('backToMovies')}
           </Link>
 
           <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <SocialShareLinks title="Share This Movie" />
+            <SocialShareLinks title={t('shareThisMovie')} />
           </section>
 
           <div className="relative h-[320px] rounded-2xl overflow-hidden">
@@ -64,23 +68,23 @@ export default function MovieDetailPage() {
                   className="bg-[#f4a30a] text-black px-4 py-2.5 rounded-xl font-semibold inline-flex items-center gap-2"
                 >
                   <Play size={16} fill="black" />
-                  Watch Now
+                  {t('watchNow')}
                 </button>
                 <button
-                  onClick={() => requireAuth(() => setShowDownload(true), 'Sign in to download movies.')}
+                  onClick={() => requireAuth(() => setShowDownload(true), t('authSigninPrompt'))}
                   className="border border-white/20 text-white px-4 py-2.5 rounded-xl font-semibold inline-flex items-center gap-2"
                 >
                   <Download size={16} />
-                  Download
+                  {t('download')}
                 </button>
               </div>
             </div>
           </div>
 
           <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <MiniRow title="Continue Watching" items={movieCards.slice(0, 3).map((m) => m.title)} />
-            <MiniRow title="Recently Watched" items={movieCards.slice().reverse().map((m) => m.title)} />
-            <MiniRow title="Recommended For You" items={movieCards.map((m) => m.title)} />
+            <MiniRow title={t('continueWatching')} items={movieCards.slice(0, 3).map((m) => m.title)} />
+            <MiniRow title={t('recentlyWatched')} items={movieCards.slice().reverse().map((m) => m.title)} />
+            <MiniRow title={t('recommendedForYou')} items={movieCards.map((m) => m.title)} />
           </section>
 
           {showWatch && (
@@ -88,8 +92,8 @@ export default function MovieDetailPage() {
               <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-[#0f0f0f] p-4">
                 <div className="aspect-video rounded-xl bg-black/80 border border-white/10 flex flex-col items-center justify-center gap-3 relative">
                   <Play size={28} className="text-[#f4a30a]" />
-                  <p className="text-white text-sm">Playing {movie.title} ({quality})</p>
-                  <p className="text-gray-400 text-xs">Subtitle: {subtitle}</p>
+                  <p className="text-white text-sm">{t('playingMovie')} {movie.title} ({quality})</p>
+                  <p className="text-gray-400 text-xs">{t('subtitleLabel')}: {subtitle === 'fr' ? t('french') : subtitle === 'rw' ? t('kinyarwanda') : t('english')}</p>
                   <button className="absolute top-3 right-3 p-2 rounded-lg bg-white/10 text-gray-300 hover:text-white">
                     <Maximize2 size={14} />
                   </button>
@@ -97,7 +101,7 @@ export default function MovieDetailPage() {
                 <div className="mt-4 space-y-3">
                   <div>
                     <div className="flex justify-between text-xs text-gray-400">
-                      <span>Progress</span>
+                      <span>{t('progressLabel')}</span>
                       <span>{progress}%</span>
                     </div>
                     <input
@@ -111,7 +115,7 @@ export default function MovieDetailPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="inline-flex items-center gap-2 text-gray-300 text-sm">
-                      <span>Quality</span>
+                      <span>{t('quality')}</span>
                       <select
                         value={quality}
                         onChange={(e) => setQuality(e.target.value)}
@@ -127,13 +131,12 @@ export default function MovieDetailPage() {
                       <Languages size={14} />
                       <select
                         value={subtitle}
-                        onChange={(e) => setSubtitle(e.target.value)}
+                        onChange={(e) => setSubtitle(e.target.value as Language)}
                         className="bg-white/5 border border-white/15 rounded-lg px-2 py-1"
                       >
-                        <option>English</option>
-                        <option>French</option>
-                        <option>Kinyarwanda</option>
-                        <option>Luganda</option>
+                        <option value="en">{t('english')}</option>
+                        <option value="fr">{t('french')}</option>
+                        <option value="rw">{t('kinyarwanda')}</option>
                       </select>
                     </div>
                   </div>
@@ -150,7 +153,7 @@ export default function MovieDetailPage() {
                   </div>
                   <div className="flex justify-end">
                     <button onClick={() => setShowWatch(false)} className="text-gray-300 text-sm hover:text-white">
-                      Close
+                      {t('closeModal')}
                     </button>
                   </div>
                 </div>
@@ -161,13 +164,13 @@ export default function MovieDetailPage() {
           {showDownload && (
             <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
               <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-                <h2 className="text-white text-lg font-semibold">Download Quality</h2>
+                <h2 className="text-white text-lg font-semibold">{t('downloadQuality')}</h2>
                 <div className="mt-4 flex flex-col gap-2">
                   {['360p', '480p', '720p', '1080p'].map((q) => (
                     <button
                       key={q}
                       onClick={() => {
-                        toast({ title: 'Download queued', description: `${movie.title} (${q}) added to downloads.` })
+                        toast({ title: t('downloadQueued'), description: `${movie.title} (${q}) ${t('addedToDownloads')}` })
                         setShowDownload(false)
                       }}
                       className="text-left px-3 py-2.5 rounded-lg border border-white/10 text-white hover:bg-white/5"
@@ -177,7 +180,7 @@ export default function MovieDetailPage() {
                   ))}
                 </div>
                 <button onClick={() => setShowDownload(false)} className="mt-4 text-gray-300 text-sm hover:text-white">
-                  Cancel
+                  {t('cancel')}
                 </button>
               </div>
             </div>

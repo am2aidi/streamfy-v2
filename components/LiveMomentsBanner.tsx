@@ -1,5 +1,9 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
+import { useAppSettings } from '@/components/AppSettingsProvider'
+import { getTranslation } from '@/lib/translations'
 
 type BannerSection = 'movies' | 'music' | 'sports' | 'compact'
 
@@ -26,11 +30,14 @@ const mediaBySection: Record<BannerSection, string[]> = {
 }
 
 export function LiveMomentsBanner({ section }: LiveMomentsBannerProps) {
+  const { settings } = useAppSettings()
+  const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const isCompact = section === 'compact'
   const textHalf = Array.from({ length: isCompact ? 3 : 5 }, () => textMain)
   const textLoop = [...textHalf, ...textHalf]
   const mediaHalf = Array.from({ length: isCompact ? 4 : 5 }).flatMap(() => mediaBySection[section])
   const mediaLoop = [...mediaHalf, ...mediaHalf]
+  const secondary = `${t('movies')}  |  ${t('music')}  |  ${t('sports')}`
 
   return (
     <section
@@ -64,14 +71,14 @@ export function LiveMomentsBanner({ section }: LiveMomentsBannerProps) {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-300">
-            <Link href="/movies" className="rounded-full border border-white/20 px-2 py-0.5 hover:border-[#f4a30a]/60 hover:text-white">Movies</Link>
-            <Link href="/music" className="rounded-full border border-white/20 px-2 py-0.5 hover:border-[#f4a30a]/60 hover:text-white">Music</Link>
-            <Link href="/sports" className="rounded-full border border-white/20 px-2 py-0.5 hover:border-[#f4a30a]/60 hover:text-white">Sports</Link>
+            <Link href="/movies" className="rounded-full border border-white/20 px-2 py-0.5 hover:border-[#f4a30a]/60 hover:text-white">{t('movies')}</Link>
+            <Link href="/music" className="rounded-full border border-white/20 px-2 py-0.5 hover:border-[#f4a30a]/60 hover:text-white">{t('music')}</Link>
+            <Link href="/sports" className="rounded-full border border-white/20 px-2 py-0.5 hover:border-[#f4a30a]/60 hover:text-white">{t('sports')}</Link>
           </div>
           </div>
         ) : (
           <div className="mt-2 space-y-3">
-            <p className="text-sm text-white/90">{textSecondary}</p>
+            <p className="text-sm text-white/90">{secondary}</p>
             <p className="text-xs text-gray-300">{textTertiary}</p>
             <div className="overflow-hidden rounded-xl border border-white/10 bg-black/20 p-2">
               <div className="streamfy-media-track flex min-w-max items-center gap-2">

@@ -94,7 +94,7 @@ export function MusicSection() {
         }
         void playAt(index)
       },
-      'Sign in to listen to music.'
+      t('authSigninPrompt')
     )
   }
 
@@ -104,7 +104,7 @@ export function MusicSection() {
         const next = index + 1 < filtered.length ? index + 1 : 0
         void playAt(next)
       },
-      'Sign in to listen to music.'
+      t('authSigninPrompt')
     )
   }
 
@@ -114,7 +114,7 @@ export function MusicSection() {
         const prev = index - 1 >= 0 ? index - 1 : filtered.length - 1
         void playAt(prev)
       },
-      'Sign in to listen to music.'
+      t('authSigninPrompt')
     )
   }
 
@@ -177,7 +177,7 @@ export function MusicSection() {
             title="Create playlist"
           >
             <Plus size={14} />
-            Create Playlist
+            {t('addPlaylist')}
           </button>
           <Link href="/music" className="flex items-center gap-1 text-[#f4a30a] text-sm hover:underline">
             {t('seeAll')} <ChevronRight size={14} />
@@ -198,7 +198,7 @@ export function MusicSection() {
               className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs text-white hover:bg-white/15"
             >
               <Play size={14} />
-              {currentIndex === 0 && isPlaying ? 'Pause' : 'Play'}
+              {currentIndex === 0 && isPlaying ? t('pause') : t('play')}
             </button>
           </div>
         </div>
@@ -208,24 +208,24 @@ export function MusicSection() {
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-1 text-gray-400 text-sm">
           <input type="checkbox" checked={favoritesOnly} onChange={(e) => setFavoritesOnly(e.target.checked)} className="accent-[#f4a30a]" />
-          Favorites only
+          {t('favoritesOnly')}
         </label>
-        <select aria-label="Filter by genre" title="Filter by genre" value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)} className="bg-white/5 text-white text-sm rounded-md px-3 py-2">
+        <select aria-label="Filter by genre" title="Filter by genre" value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)} className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
           <option>All</option>
           {genres.map((g) => (
             <option key={g} value={g}>{g}</option>
           ))}
         </select>
-        <select aria-label="Filter by artist" title="Filter by artist" value={artistFilter} onChange={(e) => setArtistFilter(e.target.value)} className="bg-white/5 text-white text-sm rounded-md px-3 py-2">
+        <select aria-label="Filter by artist" title="Filter by artist" value={artistFilter} onChange={(e) => setArtistFilter(e.target.value)} className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
           <option>All</option>
           {artists.map((a) => (
             <option key={a} value={a}>{a}</option>
           ))}
         </select>
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title, artist, album" className="bg-white/5 text-white text-sm rounded-md px-3 py-2 flex-1 min-w-[180px]" />
-        <select aria-label="Sort tracks" title="Sort tracks" value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-white/5 text-white text-sm rounded-md px-3 py-2">
-          <option value="popular">Most popular</option>
-          <option value="newest">Newest</option>
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title, artist, album" className="min-w-[180px] flex-1 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
+        <select aria-label="Sort tracks" title="Sort tracks" value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
+          <option value="popular">{t('mostPopular')}</option>
+          <option value="newest">{t('newest')}</option>
         </select>
       </div>
 

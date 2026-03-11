@@ -3,9 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Play, Pause, SkipBack, SkipForward, Volume2, Settings, MessageCircle, Maximize2, Radio, Shuffle, Repeat } from 'lucide-react'
 import { useAuth } from '@/components/AuthProvider'
+import { useAppSettings } from '@/components/AppSettingsProvider'
+import { getTranslation } from '@/lib/translations'
 
 export function MusicPlayer() {
   const { requireAuth } = useAuth()
+  const { settings } = useAppSettings()
+  const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const tracks = useMemo(
     () => [
       {
@@ -65,7 +69,7 @@ export function MusicPlayer() {
         await audio.play()
         setIsPlaying(true)
       },
-      'Sign in to listen to music.'
+      t('authSigninPrompt')
     )
   }
 
@@ -121,13 +125,13 @@ export function MusicPlayer() {
             <button className="text-gray-400 hover:text-white transition-colors">
               <Shuffle size={18} />
             </button>
-            <button className="text-gray-400 hover:text-white transition-colors" onClick={() => requireAuth(() => setIndex((prev) => (prev === 0 ? tracks.length - 1 : prev - 1)), 'Sign in to listen to music.')}>
+            <button className="text-gray-400 hover:text-white transition-colors" onClick={() => requireAuth(() => setIndex((prev) => (prev === 0 ? tracks.length - 1 : prev - 1)), t('authSigninPrompt'))}>
               <SkipBack size={18} />
             </button>
             <button onClick={togglePlay} className="w-10 h-10 rounded-full bg-[#f4a30a] flex items-center justify-center text-black hover:scale-105 transition-transform">
               {isPlaying ? <Pause size={18} fill="black" /> : <Play size={18} fill="black" />}
             </button>
-            <button className="text-gray-400 hover:text-white transition-colors" onClick={() => requireAuth(() => setIndex((prev) => (prev + 1) % tracks.length), 'Sign in to listen to music.')}>
+            <button className="text-gray-400 hover:text-white transition-colors" onClick={() => requireAuth(() => setIndex((prev) => (prev + 1) % tracks.length), t('authSigninPrompt'))}>
               <SkipForward size={18} />
             </button>
             <button className="text-gray-400 hover:text-white transition-colors">

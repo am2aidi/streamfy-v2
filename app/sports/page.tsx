@@ -12,26 +12,26 @@ import { useAppSettings } from '@/components/AppSettingsProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/hooks/use-toast'
 import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
-import { SocialShareLinks } from '@/components/SocialShareLinks'
+import { getTranslation } from '@/lib/translations'
 
 type TabId = 'yesterday' | 'today' | 'upcoming'
+
+const scheduleDays = ['Yesterday', 'Today', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
+type ScheduleDay = (typeof scheduleDays)[number]
 
 export default function SportsPage() {
   const router = useRouter()
   const { requireAuth } = useAuth()
   const [activeTab, setActiveTab] = useState<TabId>('today')
+  const [scheduleDay, setScheduleDay] = useState<ScheduleDay>('Today')
   const [showAll, setShowAll] = useState(false)
   const [myLeagueOnly, setMyLeagueOnly] = useState(false)
   const [sportFilter, setSportFilter] = useState<'all' | 'football' | 'basketball' | 'volleyball'>('all')
   const [leagueFilter, setLeagueFilter] = useState('all')
   const { settings, updateSetting } = useAppSettings()
   const { toast } = useToast()
+  const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
 
-  const tabs: { id: TabId; label: string }[] = [
-    { id: 'yesterday', label: 'Yesterday' },
-    { id: 'today', label: 'Today' },
-    { id: 'upcoming', label: 'Upcoming' },
-  ]
   const quickDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
   const matchesMap: Record<TabId, typeof sportsData.today> = {
@@ -48,10 +48,14 @@ export default function SportsPage() {
   }
 
   const matchesWithIndex = matchesMap[activeTab].map((match, index) => ({ match, index }))
+  const dayScopedMatches =
+    activeTab === 'upcoming' && scheduleDay !== 'Today' && scheduleDay !== 'Yesterday'
+      ? matchesWithIndex.filter(({ match }) => match.time?.startsWith(`${scheduleDay} `))
+      : matchesWithIndex
   const sportScopedMatches =
     sportFilter === 'all'
-      ? matchesWithIndex
-      : matchesWithIndex.filter(({ match }) => inferSport(match.league) === sportFilter)
+      ? dayScopedMatches
+      : dayScopedMatches.filter(({ match }) => inferSport(match.league) === sportFilter)
 
   const possibleLeagues = Array.from(new Set(sportScopedMatches.map(({ match }) => match.league)))
   const leagueScopedMatches =
@@ -63,11 +67,11 @@ export default function SportsPage() {
   const displayedMatches = showAll ? currentMatches : currentMatches.slice(0, 4)
 
   const dateLabel =
-    activeTab === 'yesterday'
-      ? 'Tuesday, Feb 25'
-      : activeTab === 'today'
-        ? 'Wednesday, Feb 26'
-        : 'This Week'
+    scheduleDay === 'Yesterday'
+      ? 'Yesterday'
+      : scheduleDay === 'Today'
+        ? 'Today'
+        : `${scheduleDay} fixtures`
 
   const sportsNews = [
     {
@@ -91,7 +95,7 @@ export default function SportsPage() {
   ]
 
   const openRestrictedMatch = (href: string) => {
-    requireAuth(() => router.push(href), 'Sign in to view sports match details.')
+    requireAuth(() => router.push(href), t('authSigninPrompt'))
   }
 
   return (
@@ -105,7 +109,7 @@ export default function SportsPage() {
           <LiveMomentsBanner section="sports" />
           {/* Page Title with League Button */}
           <div className="flex items-center justify-between">
-            <h1 className="text-white text-3xl font-bold">Sports</h1>
+            <h1 className="text-white text-3xl font-bold">{t('sports')}</h1>
             <button
               onClick={() => setMyLeagueOnly((prev) => !prev)}
               className={`flex items-center gap-2 text-sm font-medium rounded-full px-4 py-2 transition-colors ${
@@ -116,10 +120,6 @@ export default function SportsPage() {
               {myLeagueOnly ? 'All Leagues' : 'My Leagues'}
             </button>
           </div>
-
-          <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <SocialShareLinks title="Share Sports Page" />
-          </section>
 
           {/* Live Events Section */}
           <section className="flex flex-col gap-4">
@@ -148,9 +148,9 @@ export default function SportsPage() {
               <select
                 value={leagueFilter}
                 onChange={(e) => setLeagueFilter(e.target.value)}
-                className="ml-auto rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white"
+                className="ml-auto rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-white"
               >
-                <option value="all">All leagues</option>
+                <option value="all">{t('allLeagues')}</option>
                 {possibleLeagues.map((league) => (
                   <option key={league} value={league}>
                     {league}
@@ -160,14 +160,14 @@ export default function SportsPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <h2 className="text-white text-lg font-bold">Live Events</h2>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <h2 className="text-white text-lg font-bold">{t('liveEvents')}</h2>
+                </div>
+                <button className="flex items-center gap-1 text-[#f4a30a] text-sm cursor-pointer hover:underline">
+                  {t('seeAll')} <ChevronRight size={14} />
+                </button>
               </div>
-              <button className="flex items-center gap-1 text-[#f4a30a] text-sm cursor-pointer hover:underline">
-                See All <ChevronRight size={14} />
-              </button>
-            </div>
             <div className="grid grid-cols-2 gap-4">
               {sportsData.today
                 .map((match, index) => ({ match, index }))
@@ -243,9 +243,9 @@ export default function SportsPage() {
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="inline-flex items-center gap-2 text-white text-lg font-bold">
                   <Newspaper size={18} className="text-[#f4a30a]" />
-                  Sports News
+                  {t('sportsNews')}
                 </h2>
-                <span className="text-xs text-gray-500">Updated every hour</span>
+                <span className="text-xs text-gray-500">{t('updatedEveryHour')}</span>
               </div>
 
               <div className="mb-4 flex flex-wrap gap-2">
@@ -253,7 +253,7 @@ export default function SportsPage() {
                   <button
                     key={day}
                     className={`rounded-full border px-3 py-1.5 text-xs ${
-                      (day === 'Wed' && activeTab === 'today') || (day === 'Tue' && activeTab === 'yesterday')
+                      day === scheduleDay
                         ? 'border-[#f4a30a]/60 bg-[#f4a30a]/20 text-[#f4a30a]'
                         : 'border-white/15 bg-white/5 text-gray-300'
                     }`}
@@ -284,9 +284,9 @@ export default function SportsPage() {
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="inline-flex items-center gap-2 text-white text-lg font-bold">
                   <PlayCircle size={18} className="text-[#f4a30a]" />
-                  Sports Shorts
+                  {t('sportsShorts')}
                 </h2>
-                <span className="text-xs text-gray-500">Match clips</span>
+                <span className="text-xs text-gray-500">{t('matchClips')}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -323,24 +323,30 @@ export default function SportsPage() {
 
           {/* Schedule Tabs - Apple Sports Style */}
           <section className="flex flex-col gap-4">
-            {/* Tabs */}
-            <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id)
-                    setShowAll(false)
-                  }}
-                  className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-white/15 text-white'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            {/* Days */}
+            <div className="flex items-center gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.04] p-2">
+              {scheduleDays.map((day) => {
+                const active = scheduleDay === day
+                return (
+                  <button
+                    key={day}
+                    onClick={() => {
+                      setScheduleDay(day)
+                      setShowAll(false)
+                      setSportFilter('all')
+                      setLeagueFilter('all')
+                      if (day === 'Yesterday') setActiveTab('yesterday')
+                      else if (day === 'Today') setActiveTab('today')
+                      else setActiveTab('upcoming')
+                    }}
+                    className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+                      active ? 'bg-white/15 text-white' : 'bg-black/30 text-gray-300 hover:bg-white/[0.06] hover:text-white'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                )
+              })}
             </div>
 
             {/* Date Label & Show More */}
@@ -397,8 +403,8 @@ export default function SportsPage() {
                             : [...settings.favoriteLeagues, match.league]
                           updateSetting('favoriteLeagues', next)
                           toast({
-                            title: isFav ? 'League removed' : 'League added',
-                            description: `${match.league} ${isFav ? 'removed from' : 'added to'} My Leagues.`,
+                            title: isFav ? t('leagueRemoved') : t('leagueAdded'),
+                            description: `${match.league} ${isFav ? t('removedFromMyLeagues') : t('addedToMyLeagues')} ${t('myLeagues')}.`,
                           })
                         }}
                         aria-label={
@@ -414,7 +420,7 @@ export default function SportsPage() {
                       >
                         <Star
                           size={12}
-                          className={settings.favoriteLeagues.includes(match.league) || match.starred ? 'text-[#f4a30a]' : 'text-gray-600'}
+                          className={settings.favoriteLeagues.includes(match.league) || match.starred ? 'text-[#f4a30a]' : 'text-gray-300'}
                           fill={settings.favoriteLeagues.includes(match.league) || match.starred ? '#f4a30a' : 'transparent'}
                         />
                       </button>
@@ -444,7 +450,7 @@ export default function SportsPage() {
                           <span className="text-white text-base font-bold">
                             {match.score1} - {match.score2}
                           </span>
-                          <span className="text-gray-500 text-[10px] font-medium">FT</span>
+                          <span className="text-gray-500 text-[10px] font-medium">{t('fullTimeLabel')}</span>
                         </>
                       ) : match.status === 'live' ? (
                         <>
@@ -453,15 +459,15 @@ export default function SportsPage() {
                           </span>
                           <div className="flex items-center gap-1">
                             <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                            <span className="text-red-400 text-[10px] font-bold">LIVE</span>
+                            <span className="text-red-400 text-[10px] font-bold">{t('liveLabel')}</span>
                           </div>
                         </>
                       ) : (
                         <>
-                          <span className="text-white text-base font-bold">{match.time}</span>
+                            <span className="text-white text-base font-bold">{match.time}</span>
                           <div className="flex items-center gap-1">
                             <Clock size={9} className="text-gray-500" />
-                            <span className="text-gray-500 text-[10px]">Scheduled</span>
+                            <span className="text-gray-500 text-[10px]">{t('scheduledLabel')}</span>
                           </div>
                         </>
                       )}
@@ -491,7 +497,7 @@ export default function SportsPage() {
 
           {/* Popular Sports */}
           <section className="flex flex-col gap-4">
-            <h2 className="text-white text-lg font-bold">Popular Sports</h2>
+            <h2 className="text-white text-lg font-bold">{t('popularSports')}</h2>
             <div className="grid grid-cols-4 gap-3">
               {[
                 { name: 'Football', color: 'from-green-600 to-green-800' },

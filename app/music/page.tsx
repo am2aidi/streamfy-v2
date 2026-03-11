@@ -11,11 +11,12 @@ import Image from 'next/image'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { useState } from 'react'
 import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
-import { SocialShareLinks } from '@/components/SocialShareLinks'
+import { getTranslation } from '@/lib/translations'
 
 export default function MusicPage() {
   const { settings, updateSetting } = useAppSettings()
   const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
 
   const filteredTracks = settings.favoriteTracks && favoritesOnly
     ? musicTracks.filter((t) => settings.favoriteTracks.includes(t.id))
@@ -31,22 +32,18 @@ export default function MusicPage() {
         <main className="flex flex-col gap-8 px-6">
           <LiveMomentsBanner section="music" />
           <div>
-            <h2 className="text-white text-2xl font-bold">Music</h2>
-            <p className="text-gray-400 text-sm mt-1">Explore trending tracks and new releases</p>
+            <h2 className="text-white text-2xl font-bold">{t('music')}</h2>
+            <p className="text-gray-400 text-sm mt-1">{t('listenTrendingSongs')}</p>
           </div>
-
-          <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <SocialShareLinks title="Share Music Page" />
-          </section>
 
           <MusicSection />
 
           <section className="flex flex-col gap-4">
-            <h3 className="text-white text-xl font-bold">All Tracks</h3>
+            <h3 className="text-white text-xl font-bold">{t('allTracks')}</h3>
             <div className="flex items-center gap-2 mb-2">
             <label className="flex items-center gap-1 text-gray-400 text-sm">
               <input type="checkbox" className="accent-[#f4a30a]" checked={favoritesOnly} onChange={(e) => setFavoritesOnly(e.target.checked)} />
-              Favorites only
+              {t('favoritesOnly')}
             </label>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -83,7 +80,7 @@ export default function MusicPage() {
 
           {/* Additional Music Collections */}
           <section className="flex flex-col gap-4">
-            <h3 className="text-white text-xl font-bold">For You</h3>
+            <h3 className="text-white text-xl font-bold">{t('forYou')}</h3>
             <div className="grid grid-cols-3 gap-4">
               {[
                 { title: 'Workout Beats', desc: 'High energy music for your fitness routine' },

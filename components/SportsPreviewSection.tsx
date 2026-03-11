@@ -7,10 +7,14 @@ import { useRouter } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
 import { getAllMatches } from '@/lib/sports-data'
 import { useAuth } from '@/components/AuthProvider'
+import { useAppSettings } from '@/components/AppSettingsProvider'
+import { getTranslation } from '@/lib/translations'
 
 export function SportsPreviewSection() {
   const router = useRouter()
   const { requireAuth } = useAuth()
+  const { settings } = useAppSettings()
+  const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const [leagueFilter, setLeagueFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState<'All' | 'Live' | 'Upcoming' | 'Final'>('All')
 
@@ -32,11 +36,11 @@ export function SportsPreviewSection() {
     <section className="flex flex-col gap-4">
       <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-white text-2xl font-bold streamfy-fade-slide">Sports</h2>
-          <p className="text-gray-400 text-sm">Live and upcoming leagues</p>
+          <h2 className="text-white text-2xl font-bold streamfy-fade-slide">{t('sports')}</h2>
+          <p className="text-gray-400 text-sm">{t('liveAndUpcomingLeagues')}</p>
         </div>
         <Link href="/sports" className="flex items-center gap-1 text-[#f4a30a] text-sm hover:underline">
-          See All <ChevronRight size={14} />
+          {t('seeAll')} <ChevronRight size={14} />
         </Link>
       </div>
 
@@ -49,7 +53,7 @@ export function SportsPreviewSection() {
           >
             {leagues.map((league) => (
               <option key={league} value={league}>
-                League: {league}
+                {t('leagueLabel')}: {league}
               </option>
             ))}
           </select>
@@ -58,17 +62,17 @@ export function SportsPreviewSection() {
             onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
             className="rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white"
           >
-            <option value="All">Status: All</option>
-            <option value="Live">Status: Live</option>
-            <option value="Upcoming">Status: Upcoming</option>
-            <option value="Final">Status: Final</option>
+            <option value="All">{t('statusLabel')}: {t('statusAll')}</option>
+            <option value="Live">{t('statusLabel')}: {t('statusLive')}</option>
+            <option value="Upcoming">{t('statusLabel')}: {t('statusUpcoming')}</option>
+            <option value="Final">{t('statusLabel')}: {t('statusFinal')}</option>
           </select>
         </div>
       </div>
 
       {featured ? (
         <div className="streamfy-fade-slide rounded-xl border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-xs uppercase tracking-wider text-gray-500">Featured League</p>
+          <p className="text-xs uppercase tracking-wider text-gray-500">{t('featuredLeague')}</p>
           <p className="text-sm font-semibold text-white streamfy-soft-float">{featured.league}</p>
           <p className="text-xs text-gray-400">
             {featured.team1.name} vs {featured.team2.name}
@@ -83,7 +87,7 @@ export function SportsPreviewSection() {
             href={`/sports/${match.id}`}
             onClick={(e) => {
               e.preventDefault()
-              requireAuth(() => router.push(`/sports/${match.id}`), 'Sign in to view sports match details.')
+              requireAuth(() => router.push(`/sports/${match.id}`), t('authSigninPrompt'))
             }}
             className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10 transition-colors"
           >

@@ -9,6 +9,7 @@ export interface MovieItem {
   year: number
   rating: number
   genre: string
+  language: 'en' | 'fr' | 'rw'
 }
 
 export const movieCards: MovieItem[] = [
@@ -23,6 +24,7 @@ export const movieCards: MovieItem[] = [
     year: 2024,
     rating: 8.8,
     genre: 'Thriller',
+    language: 'en',
   },
   {
     id: 'now-in-theaters',
@@ -33,6 +35,7 @@ export const movieCards: MovieItem[] = [
     year: 2025,
     rating: 8.2,
     genre: 'Action',
+    language: 'fr',
   },
   {
     id: 'top-rated',
@@ -43,6 +46,7 @@ export const movieCards: MovieItem[] = [
     year: 2023,
     rating: 8.6,
     genre: 'Drama',
+    language: 'en',
   },
   {
     id: 'city-shadow',
@@ -53,6 +57,7 @@ export const movieCards: MovieItem[] = [
     year: 2025,
     rating: 8.1,
     genre: 'Mystery',
+    language: 'rw',
   },
   {
     id: 'final-whistle',
@@ -63,6 +68,7 @@ export const movieCards: MovieItem[] = [
     year: 2024,
     rating: 7.9,
     genre: 'Sports',
+    language: 'en',
   },
   {
     id: 'kylexy',
@@ -73,6 +79,7 @@ export const movieCards: MovieItem[] = [
     year: 2026,
     rating: 9.1,
     genre: 'Sci-Fi',
+    language: 'rw',
   },
   {
     id: 'loud-silence',
@@ -83,6 +90,7 @@ export const movieCards: MovieItem[] = [
     year: 2025,
     rating: 8.0,
     genre: 'Comedy',
+    language: 'fr',
   },
   {
     id: 'strike-zone',
@@ -93,6 +101,7 @@ export const movieCards: MovieItem[] = [
     year: 2026,
     rating: 8.3,
     genre: 'Action',
+    language: 'en',
   },
   {
     id: 'quantum-border',
@@ -103,6 +112,7 @@ export const movieCards: MovieItem[] = [
     year: 2026,
     rating: 8.7,
     genre: 'Sci-Fi',
+    language: 'fr',
   },
 ]
 

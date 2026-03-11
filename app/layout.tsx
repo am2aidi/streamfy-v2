@@ -1,14 +1,10 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AppSettingsProvider } from '@/components/AppSettingsProvider'
 import { AuthProvider } from '@/components/AuthProvider'
 import { Toaster } from '@/components/ui/toaster'
 import { StreamfyIntro } from '@/components/StreamfyIntro'
 import './globals.css'
-
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'Streamfy - Movies, Music & Sports',
@@ -31,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body className="overflow-x-hidden font-sans antialiased">
         <StreamfyIntro />
         <AppSettingsProvider>

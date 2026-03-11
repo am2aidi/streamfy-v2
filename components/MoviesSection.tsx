@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast'
 import { movieCards } from '@/lib/movies-data'
 import { useAuth } from '@/components/AuthProvider'
 import { useAppSettings } from '@/components/AppSettingsProvider'
+import { getTranslation, type Language } from '@/lib/translations'
 
 const featuredMeta: Record<string, { season: string; episode: string; director: string }> = {
   kylexy: { season: 'S2', episode: 'E8', director: 'K. Ortega' },
@@ -17,12 +18,14 @@ const featuredMeta: Record<string, { season: string; episode: string; director: 
 export function MoviesSection() {
   const { toast } = useToast()
   const { requireAuth } = useAuth()
-  useAppSettings()
+  const { settings } = useAppSettings()
+  const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
 
   const [genreFilter, setGenreFilter] = useState('All')
   const [yearFilter, setYearFilter] = useState('All')
   const [ratingFilter, setRatingFilter] = useState('All')
   const [secondaryFilter, setSecondaryFilter] = useState('All genres')
+  const [languageFilter, setLanguageFilter] = useState<'All' | Language>('All')
   const [search, setSearch] = useState('')
   const [watchLater, setWatchLater] = useState<string[]>([])
   const [myList, setMyList] = useState<string[]>([])
@@ -39,15 +42,16 @@ export function MoviesSection() {
       const matchesYear = yearFilter === 'All' || String(movie.year) === yearFilter
       const matchesRating = ratingFilter === 'All' || movie.rating >= Number(ratingFilter)
       const matchesSecondary = secondaryFilter === 'All genres' || movie.genre === secondaryFilter
+      const matchesLanguage = languageFilter === 'All' ? true : movie.language === languageFilter
       const query = search.trim().toLowerCase()
       const matchesSearch =
         !query ||
         movie.title.toLowerCase().includes(query) ||
         movie.description.toLowerCase().includes(query) ||
         movie.genre.toLowerCase().includes(query)
-      return matchesGenre && matchesYear && matchesRating && matchesSecondary && matchesSearch
+      return matchesGenre && matchesYear && matchesRating && matchesSecondary && matchesLanguage && matchesSearch
     })
-  }, [genreFilter, ratingFilter, search, secondaryFilter, yearFilter])
+  }, [genreFilter, ratingFilter, search, secondaryFilter, yearFilter, languageFilter])
 
   const featured = filteredMovies.find((movie) => movie.id === 'kylexy') ?? filteredMovies[0] ?? movieCards[0]
   const listMovies = filteredMovies.filter((movie) => movie.id !== featured.id)
@@ -57,6 +61,7 @@ export function MoviesSection() {
     setYearFilter('All')
     setRatingFilter('All')
     setSecondaryFilter('All genres')
+    setLanguageFilter('All')
     setSearch('')
   }
 
@@ -64,8 +69,8 @@ export function MoviesSection() {
     <section className="flex flex-col gap-4">
       <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Movies</h2>
-          <p className="text-sm text-gray-400">Fresh picks in a full vertical catalog</p>
+          <h2 className="text-2xl font-bold text-white">{t('movies')}</h2>
+          <p className="text-sm text-gray-400">{t('verticalMovieList')}</p>
         </div>
         <div className="flex items-center gap-4">
           <button
@@ -73,31 +78,31 @@ export function MoviesSection() {
               requireAuth(
                 () =>
                   toast({
-                    title: 'Download started',
-                    description: 'All available prototype movies were added to queue.',
+                    title: t('downloadStarted'),
+                    description: t('downloadPrototypeQueued'),
                   }),
-                'Sign in to download movies.'
+                t('authSigninPrompt')
               )
             }
             className="flex items-center gap-1 text-sm text-white/80 transition-colors hover:text-white"
           >
             <Download size={14} />
-            Download All
+            {t('download')}
           </button>
           <Link href="/movies" className="flex items-center gap-1 text-sm text-[#f4a30a] hover:underline">
-            See All <ChevronRight size={14} />
+            {t('seeAll')} <ChevronRight size={14} />
           </Link>
         </div>
       </div>
 
       <div className="rounded-3xl border border-white/10 bg-[#071325] p-4 md:p-5">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto_auto]">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto_auto_auto]">
           <div className="relative">
             <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/50" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Start searching..."
+              placeholder={t('startSearching')}
               className="w-full rounded-2xl border border-white/15 bg-black/45 py-3 pl-12 pr-3 text-sm text-white placeholder-white/40 outline-none focus:border-[#f4a30a]/70"
             />
           </div>
@@ -108,7 +113,7 @@ export function MoviesSection() {
               onChange={(e) => setYearFilter(e.target.value)}
               className="appearance-none rounded-2xl border border-white/15 bg-black/45 px-4 py-3 pr-10 text-sm text-white"
             >
-              <option value="All">All years</option>
+              <option value="All">{t('allYears')}</option>
               {years
                 .filter((year) => year !== 'All')
                 .map((year) => (
@@ -122,11 +127,25 @@ export function MoviesSection() {
 
           <div className="relative">
             <select
+              value={languageFilter}
+              onChange={(e) => setLanguageFilter(e.target.value as typeof languageFilter)}
+              className="appearance-none rounded-2xl border border-white/15 bg-black/45 px-4 py-3 pr-10 text-sm text-white"
+            >
+              <option value="All">{t('selectLanguage')}</option>
+              <option value="en">{t('english')}</option>
+              <option value="fr">{t('french')}</option>
+              <option value="rw">{t('kinyarwanda')}</option>
+            </select>
+            <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/80" />
+          </div>
+
+          <div className="relative">
+            <select
               value={secondaryFilter}
               onChange={(e) => setSecondaryFilter(e.target.value)}
               className="appearance-none rounded-2xl border border-white/15 bg-black/45 px-4 py-3 pr-10 text-sm text-white"
             >
-              <option>All genres</option>
+              <option value="All genres">{t('allGenres')}</option>
               {genres
                 .filter((genre) => genre !== 'All')
                 .map((genre) => (
@@ -144,10 +163,10 @@ export function MoviesSection() {
               onChange={(e) => setRatingFilter(e.target.value)}
               className="appearance-none rounded-2xl border border-white/15 bg-black/45 px-4 py-3 pr-10 text-sm text-white"
             >
-              <option value="All">All ratings</option>
-              <option value="9">9+ rating</option>
-              <option value="8">8+ rating</option>
-              <option value="7">7+ rating</option>
+              <option value="All">{t('rating')}</option>
+              <option value="9">9+</option>
+              <option value="8">8+</option>
+              <option value="7">7+</option>
             </select>
             <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/80" />
           </div>
@@ -156,7 +175,7 @@ export function MoviesSection() {
             onClick={clearAllFilters}
             className="rounded-2xl border border-[#f4a30a]/40 bg-[#f4a30a]/10 px-4 py-3 text-sm text-[#f4a30a] transition-colors hover:bg-[#f4a30a]/15"
           >
-            Clear All Filters
+            {t('clearAllFilters')}
           </button>
         </div>
 
@@ -201,7 +220,7 @@ export function MoviesSection() {
                 className="inline-flex items-center gap-2 rounded-xl bg-[#f4a30a] px-4 py-2.5 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
               >
                 <Play size={16} fill="black" />
-                Watch Now
+                {t('watchNow')}
               </Link>
               <button
                 onClick={() => {
@@ -209,14 +228,14 @@ export function MoviesSection() {
                   const next = inWatchLater ? watchLater.filter((id) => id !== featured.id) : [...watchLater, featured.id]
                   setWatchLater(next)
                   toast({
-                    title: inWatchLater ? 'Removed from Watch Later' : 'Added to Watch Later',
+                    title: inWatchLater ? t('removedFromWatchLater') : t('addedToWatchLater'),
                     description: featured.title,
                   })
                 }}
                 className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2.5 text-sm text-white transition-colors hover:bg-white/10"
               >
                 <ListPlus size={16} />
-                Watch Later
+                {t('watchLater')}
               </button>
             </div>
           </div>

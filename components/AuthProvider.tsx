@@ -195,6 +195,8 @@ interface AuthModalProps {
 }
 
 function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }: AuthModalProps) {
+  const { settings } = useAppSettings()
+  const t = (key: TranslationKey) => getTranslation(settings.language, key)
   const [identifier, setIdentifier] = useState('joe.don@example.com')
   const [signInCountryCode, setSignInCountryCode] = useState('+250')
   const [password, setPassword] = useState('')
@@ -235,7 +237,7 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
     setMessage('')
     const value = identifier.trim()
     if (!value || !password.trim()) {
-      setError('Invalid credentials. Please try again.')
+      setError(t('authInvalidCredentials'))
       return
     }
     const users = readUsers()
@@ -251,7 +253,7 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
       return (byEmail || byPhone) && entry.password === password
     })
     if (!user) {
-      setError('Invalid credentials. Please try again.')
+      setError(t('authInvalidCredentials'))
       return
     }
     onAuthSuccess({
@@ -268,11 +270,11 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
     const trimmedEmail = email.trim()
     const trimmedPhone = phone.trim()
     if (!trimmedEmail && !trimmedPhone) {
-      setError('Enter an email or phone number.')
+      setError(t('authEmailOrPhoneRequired'))
       return
     }
     if (!password.trim() || password.trim().length < 6) {
-      setError('Password must be at least 6 characters.')
+      setError(t('authWeakPassword'))
       return
     }
     const fullPhone = trimmedPhone ? `${countryCode}${trimmedPhone}` : undefined
@@ -283,7 +285,7 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
         (fullPhone && entry.phone === fullPhone)
     )
     if (existing) {
-      setError('Account already exists for this email or phone.')
+      setError(t('authUserExists'))
       return
     }
     const newUser: StoredUser = {
@@ -310,37 +312,47 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
     })
   }
 
+  const backdropRow1 = authBackdropPosters
+  const backdropRow2 = [...authBackdropPosters.slice(1), authBackdropPosters[0]]
+  const backdropRow3 = [...authBackdropPosters.slice(2), ...authBackdropPosters.slice(0, 2)]
+
   return (
     <div className="fixed inset-0 z-[80] overflow-y-auto bg-black">
       <button
         onClick={onClose}
         className="absolute left-4 top-4 z-20 rounded-full bg-black/40 p-2 text-white hover:bg-black/70"
-        aria-label="Close"
+        aria-label={t('close')}
       >
         <X size={20} />
       </button>
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden bg-black">
-        <div className="absolute -left-20 -top-10 flex w-[130%] rotate-[-12deg] gap-2">
-          {authBackdropPosters.concat(authBackdropPosters).slice(0, 8).map((poster, i) => (
-            <div key={`row1-${poster}-${i}`} className="relative h-40 w-64 shrink-0 overflow-hidden rounded-md">
-              <Image src={poster} alt="" fill className="object-cover" />
-            </div>
-          ))}
+        <div className="absolute -left-24 -top-10 w-[150%] rotate-[-12deg] overflow-hidden">
+          <div className="streamfy-media-track flex w-max gap-2" style={{ animationDuration: '44s', animationDirection: 'reverse' }}>
+            {backdropRow1.concat(backdropRow1).map((poster, i) => (
+              <div key={`row1-${poster}-${i}`} className="relative h-40 w-64 shrink-0 overflow-hidden rounded-md">
+                <Image src={poster} alt="" fill className="object-cover" />
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="absolute -left-16 top-[24%] flex w-[130%] rotate-[-12deg] gap-2">
-          {authBackdropPosters.concat(authBackdropPosters).slice(1, 9).map((poster, i) => (
-            <div key={`row2-${poster}-${i}`} className="relative h-44 w-72 shrink-0 overflow-hidden rounded-md">
-              <Image src={poster} alt="" fill className="object-cover" />
-            </div>
-          ))}
+        <div className="absolute -left-16 top-[26%] w-[150%] rotate-[-12deg] overflow-hidden">
+          <div className="streamfy-media-track flex w-max gap-2" style={{ animationDuration: '52s' }}>
+            {backdropRow2.concat(backdropRow2).map((poster, i) => (
+              <div key={`row2-${poster}-${i}`} className="relative h-44 w-72 shrink-0 overflow-hidden rounded-md">
+                <Image src={poster} alt="" fill className="object-cover" />
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="absolute -left-24 top-[57%] flex w-[130%] rotate-[-12deg] gap-2">
-          {authBackdropPosters.concat(authBackdropPosters).slice(2, 10).map((poster, i) => (
-            <div key={`row3-${poster}-${i}`} className="relative h-44 w-72 shrink-0 overflow-hidden rounded-md">
-              <Image src={poster} alt="" fill className="object-cover" />
-            </div>
-          ))}
+        <div className="absolute -left-28 top-[60%] w-[150%] rotate-[-12deg] overflow-hidden">
+          <div className="streamfy-media-track flex w-max gap-2" style={{ animationDuration: '48s', animationDirection: 'reverse' }}>
+            {backdropRow3.concat(backdropRow3).map((poster, i) => (
+              <div key={`row3-${poster}-${i}`} className="relative h-44 w-72 shrink-0 overflow-hidden rounded-md">
+                <Image src={poster} alt="" fill className="object-cover" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -350,17 +362,28 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
       <div className="relative flex min-h-[100dvh] items-center justify-center px-4 py-8">
         <div className="auth-liquid-panel w-full max-w-[430px] max-h-[95vh] overflow-y-auto rounded-2xl p-5 md:p-6">
             <div className="mx-auto mb-4 flex w-fit items-center gap-2">
-              <Image src="/streamfy-s-logo.svg" alt="Streamfy Logo" width={30} height={30} className="streamfy-logo-cinematic transition-transform duration-300 hover:scale-105" />
+              <span
+                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/10 shadow-[0_14px_34px_rgba(0,0,0,0.35)]"
+                style={{ backgroundImage: 'linear-gradient(135deg, var(--app-accent-a), var(--app-accent-b))' }}
+              >
+                <Image src="/streamfy-s-logo.svg" alt="Streamfy Logo" width={36} height={36} className="streamfy-logo-cinematic transition-transform duration-300 hover:scale-105" />
+              </span>
               <span className="text-lg font-bold text-white">Streamfy</span>
             </div>
 
-            <h2 className="text-center text-2xl font-extrabold text-white md:text-3xl">
-              {mode === 'signin' ? 'Sign In' : 'Sign Up'}
-            </h2>
+            {mode === 'signup' ? (
+              <button
+                onClick={() => onModeChange('signin')}
+                className="mb-3 inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.03] px-3 py-2 text-sm text-gray-200 hover:bg-white/[0.06]"
+              >
+                <span className="text-base leading-none">←</span>
+                {t('signIn')}
+              </button>
+            ) : null}
+
+            <h2 className="text-center text-2xl font-extrabold text-white md:text-3xl">{mode === 'signin' ? t('signIn') : t('signUp')}</h2>
             <p className="mx-auto mt-2 max-w-md text-center text-sm leading-relaxed text-gray-300 md:text-base">
-              {mode === 'signin'
-                ? 'Enter your Email or Phone Number'
-                : 'Create a new account to start watching movies'}
+              {mode === 'signin' ? t('authSigninSubheading') : t('authSignupSubheading')}
             </p>
             {reason ? <p className="mt-3 text-center text-sm text-[#f4a30a]">{reason}</p> : null}
 
@@ -382,7 +405,7 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
                     <input
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
-                      placeholder="joe.don@example.com"
+                      placeholder={t('authEmailPhonePlaceholder')}
                       className="w-full rounded-xl border border-[#f4a30a]/70 bg-white/85 px-4 py-2.5 text-base text-black outline-none"
                     />
                   </div>
@@ -392,7 +415,7 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Password"
+                      placeholder={t('password')}
                       className="w-full rounded-xl border border-[#f4a30a]/70 bg-black/25 pl-9 pr-12 py-2.5 text-base text-white outline-none"
                     />
                     <button
@@ -411,18 +434,18 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
                       }}
                       className="rounded-xl bg-white/10 px-4 py-2.5 text-center text-base text-white hover:bg-white/15"
                     >
-                      Forgot password
+                      {t('forgotPassword')}
                     </button>
                     <button
                       onClick={handleSignIn}
                       className="rounded-xl bg-[#f4a30a] px-8 py-2.5 text-base font-semibold text-black hover:opacity-90"
                     >
-                      Sign In
+                      {t('signIn')}
                     </button>
                   </div>
                   <label className="inline-flex items-center gap-2 text-sm text-gray-300">
                     <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="accent-[#f4a30a]" />
-                    Remember Me
+                    {t('rememberMe')}
                   </label>
                 </>
               ) : (
@@ -430,7 +453,7 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
                   <input
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="joe.don@example.com"
+                    placeholder={t('authEmailPhonePlaceholder')}
                     className="w-full rounded-xl border border-[#f4a30a] bg-black/30 px-4 py-2.5 text-base text-white outline-none"
                   />
                   <p className="text-center text-base text-gray-300">or</p>
@@ -449,7 +472,7 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
                     <input
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                      placeholder="Phone"
+                      placeholder={t('authPhonePlaceholder')}
                       className="w-full rounded-xl border border-[#f4a30a] bg-black/30 px-4 py-2.5 text-base text-white outline-none"
                     />
                   </div>
@@ -459,7 +482,7 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your Password"
+                      placeholder={t('enterPassword')}
                       className="w-full rounded-xl border border-[#f4a30a] bg-black/30 pl-9 pr-12 py-2.5 text-base text-white outline-none"
                     />
                     <button
@@ -474,7 +497,7 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
                     onClick={handleSignUp}
                     className="w-full rounded-xl bg-[#f4a30a] px-4 py-2.5 text-base font-semibold text-black hover:opacity-90"
                   >
-                    Sign Up
+                    {t('signUp')}
                   </button>
                 </>
               )}
@@ -482,43 +505,43 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
 
             <div className="mt-6 space-y-3">
               <button onClick={socialAuth} className="w-full rounded-xl border border-white/20 bg-black/40 px-4 py-2.5 text-sm text-white hover:bg-white/10">
-                <span className="inline-flex items-center gap-2"><Mail size={18} /> Continue with Google</span>
+                <span className="inline-flex items-center gap-2"><Mail size={18} /> {t('continueWith')}</span>
               </button>
               <button
                 onClick={() => {
                   onModeChange('signin')
-                  setMessage('Continue with Email selected.')
+                  setMessage(t('continueWithEmailSelected'))
                 }}
                 className="w-full rounded-xl border border-white/20 bg-black/40 px-4 py-2.5 text-sm text-white hover:bg-white/10"
               >
-                <span className="inline-flex items-center gap-2"><Mail size={18} /> Continue with Email</span>
+                <span className="inline-flex items-center gap-2"><Mail size={18} /> {t('continueWithEmail')}</span>
               </button>
             </div>
 
             {forgotOpen ? (
               <div className="mt-4 rounded-xl border border-[#f4a30a]/30 bg-[#f4a30a]/10 p-3">
-                <p className="text-sm font-medium text-white">Forgot Password</p>
+                <p className="text-sm font-medium text-white">{t('forgotPassword')}</p>
                 <input
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
-                  placeholder="joe.don@example.com"
+                  placeholder={t('authEmailPhonePlaceholder')}
                   className="mt-2 w-full rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-white outline-none"
                 />
                 <div className="mt-2 flex gap-2">
                   <button
                     onClick={() => {
                       setForgotOpen(false)
-                      setMessage(`Reset link sent to ${forgotEmail}.`)
+                      setMessage(t('authResetSent'))
                     }}
                     className="rounded-lg bg-[#f4a30a] px-3 py-2 text-xs font-semibold text-black"
                   >
-                    Send reset link
+                    {t('sendResetLink')}
                   </button>
                   <button
                     onClick={() => setForgotOpen(false)}
                     className="rounded-lg border border-white/20 px-3 py-2 text-xs text-white"
                   >
-                    Cancel
+                    {t('cancel')}
                   </button>
                 </div>
               </div>
@@ -528,13 +551,13 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
             {message ? <p className="mt-4 text-sm text-[#f4a30a]">{message}</p> : null}
 
             <div className="mt-6 flex items-center justify-center gap-2 text-sm">
-              <span className="text-gray-300">{mode === 'signin' ? "Don't have an account?" : 'Have an account?'}</span>
+              <span className="text-gray-300">{mode === 'signin' ? t('authNoAccount') : t('authHaveAccount')}</span>
               <button
                 onClick={() => onModeChange(mode === 'signin' ? 'signup' : 'signin')}
                 className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2 text-white hover:bg-white/10"
               >
                 <UserPlus size={16} />
-                {mode === 'signin' ? 'Sign Up' : 'Sign In'}
+                {mode === 'signin' ? t('signUp') : t('signIn')}
               </button>
             </div>
           </div>

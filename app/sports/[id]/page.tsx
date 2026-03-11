@@ -11,6 +11,7 @@ import Image from 'next/image'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { useToast } from '@/hooks/use-toast'
 import { SocialShareLinks } from '@/components/SocialShareLinks'
+import { getTranslation } from '@/lib/translations'
 
 export default function MatchDetailPage() {
   const params = useParams<{ id: string }>()
@@ -18,32 +19,35 @@ export default function MatchDetailPage() {
   const match = useMemo(() => getMatchById(params.id), [params.id])
   const { settings, updateSetting } = useAppSettings()
   const { toast } = useToast()
+  const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
 
   if (!match) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        Match not found.
+        {t('matchNotFound')}
       </div>
     )
   }
 
   const liveScore1 = typeof match.score1 === 'number' ? match.score1 + (match.status === 'live' ? simTick % 2 : 0) : 0
   const liveScore2 = typeof match.score2 === 'number' ? match.score2 : 0
+  const statusLabel =
+    match.status === 'final' ? t('statusFinal') : match.status === 'live' ? t('statusLive') : t('statusUpcoming')
 
   return (
     <div className="flex min-h-screen bg-black">
       <Sidebar />
 
-      <div className="ml-[220px] w-[calc(100vw-220px)] min-h-[100dvh] overflow-x-hidden pb-8">
+      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-8">
         <Header />
         <main className="px-6 flex flex-col gap-6">
           <Link href="/sports" className="inline-flex items-center gap-2 text-gray-300 hover:text-white text-sm">
             <ChevronLeft size={14} />
-            Back to Sports
+            {t('backToSports')}
           </Link>
 
           <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <SocialShareLinks title="Share This Match" />
+            <SocialShareLinks title={t('shareThisMatch')} />
           </section>
 
           <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
@@ -61,7 +65,7 @@ export default function MatchDetailPage() {
                 <TeamBlock name={match.team1.name} logo={match.team1.logo} record={match.team1.record} />
                 <div className="text-center">
                   <p className="text-white text-3xl font-bold">{liveScore1} - {liveScore2}</p>
-                  <p className="text-gray-400 text-xs mt-1">{match.status?.toUpperCase() ?? 'UPCOMING'}</p>
+                  <p className="text-gray-400 text-xs mt-1">{statusLabel.toUpperCase()}</p>
                 </div>
                 <TeamBlock name={match.team2.name} logo={match.team2.logo} record={match.team2.record} alignRight />
               </div>
@@ -71,21 +75,21 @@ export default function MatchDetailPage() {
                   onClick={() => setSimTick((n) => n + 1)}
                   className="px-4 py-2 rounded-xl bg-[#f4a30a] text-black text-sm font-semibold"
                 >
-                  Simulate Score Update
+                  {t('simulateScoreUpdate')}
                 </button>
                 <button
                   onClick={() => {
                     if (settings.favoriteLeagues.includes(match.league)) {
-                      toast({ title: 'Already saved', description: `${match.league} is already in My Leagues.` })
+                      toast({ title: t('alreadySaved'), description: `${match.league} ${t('alreadySavedLeague')}` })
                       return
                     }
                     updateSetting('favoriteLeagues', [...settings.favoriteLeagues, match.league])
-                    toast({ title: 'Saved', description: `${match.league} added to My Leagues.` })
+                    toast({ title: t('saved'), description: `${match.league} ${t('savedLeague')}` })
                   }}
                   className="px-4 py-2 rounded-xl border border-white/15 text-white text-sm font-semibold inline-flex items-center gap-2"
                 >
                   <Trophy size={14} />
-                  Add League to Favorites
+                  {t('addLeagueToFavorites')}
                 </button>
               </div>
             </div>

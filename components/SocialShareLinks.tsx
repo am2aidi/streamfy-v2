@@ -1,7 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Facebook, Instagram, MessageCircle, Music2, Share2, Youtube } from 'lucide-react'
+import Image from 'next/image'
+import { Facebook, Instagram, Music2, Share2, Youtube } from 'lucide-react'
+import { useAppSettings } from '@/components/AppSettingsProvider'
+import { getTranslation } from '@/lib/translations'
 
 const socialProfiles = {
   whatsapp: 'https://wa.me/250700000000',
@@ -11,8 +14,10 @@ const socialProfiles = {
   facebook: 'https://facebook.com/streamfy',
 }
 
-export function SocialShareLinks({ targetUrl, title = 'Share To' }: { targetUrl?: string; title?: string }) {
+export function SocialShareLinks({ targetUrl, title }: { targetUrl?: string; title?: string }) {
   const [currentUrl, setCurrentUrl] = useState('')
+  const { settings } = useAppSettings()
+  const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
 
   useEffect(() => {
     setCurrentUrl(typeof window !== 'undefined' ? window.location.href : '')
@@ -23,7 +28,7 @@ export function SocialShareLinks({ targetUrl, title = 'Share To' }: { targetUrl?
   const encodedMessage = useMemo(() => encodeURIComponent(`Check this on Streamfy: ${url}`), [url])
 
   const items = [
-    { name: 'WhatsApp', icon: MessageCircle, href: `https://wa.me/?text=${encodedMessage}`, bg: 'bg-emerald-500/20', color: 'text-emerald-400' },
+    { name: 'WhatsApp', href: `https://wa.me/?text=${encodedMessage}`, bg: 'bg-emerald-500/20', color: 'text-emerald-400' },
     { name: 'Instagram', icon: Instagram, href: socialProfiles.instagram, bg: 'bg-pink-500/20', color: 'text-pink-400' },
     { name: 'TikTok', icon: Music2, href: socialProfiles.tiktok, bg: 'bg-cyan-500/20', color: 'text-cyan-300' },
     { name: 'YouTube', icon: Youtube, href: socialProfiles.youtube, bg: 'bg-red-500/20', color: 'text-red-400' },
@@ -41,7 +46,7 @@ export function SocialShareLinks({ targetUrl, title = 'Share To' }: { targetUrl?
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium text-gray-400">{title}</p>
+      <p className="text-xs font-medium text-gray-400">{title ?? t('shareWith')}</p>
       {items.map((social) => (
         <a
           key={social.name}
@@ -52,11 +57,11 @@ export function SocialShareLinks({ targetUrl, title = 'Share To' }: { targetUrl?
         >
           <span className="inline-flex items-center gap-2">
             <span className={`flex h-7 w-7 items-center justify-center rounded-full ${social.bg} ${social.color}`}>
-              <social.icon size={14} />
+              {'icon' in social ? <social.icon size={14} /> : <Image src="/whatsapp.svg" alt="" width={16} height={16} />}
             </span>
             <span className="text-gray-200">{social.name}</span>
           </span>
-          <span className="text-xs text-gray-400">Share</span>
+          <span className="text-xs text-gray-400">{t('shareAction')}</span>
         </a>
       ))}
 
@@ -65,7 +70,7 @@ export function SocialShareLinks({ targetUrl, title = 'Share To' }: { targetUrl?
         className="inline-flex items-center gap-2 rounded-lg border border-[#f4a30a]/30 bg-[#f4a30a]/10 px-3 py-2 text-xs font-medium text-[#f4a30a]"
       >
         <Share2 size={13} />
-        Copy Link
+        {t('copyLink')}
       </button>
     </div>
   )

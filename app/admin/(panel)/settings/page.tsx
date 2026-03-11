@@ -98,7 +98,9 @@ export default function AdminSettingsPage() {
   }
 
   useEffect(() => {
-    setValue(translationOverrides[lang]?.[key] ?? translations[lang][key] ?? '')
+    const selected = translations[lang] as Partial<Record<TranslationKey, string>>
+    const fallback = translations.en as Record<TranslationKey, string>
+    setValue(translationOverrides[lang]?.[key] ?? selected[key] ?? fallback[key] ?? '')
   }, [key, lang, translationOverrides])
 
   const allKeys = useMemo(() => Object.keys(translations.en) as TranslationKey[], [])

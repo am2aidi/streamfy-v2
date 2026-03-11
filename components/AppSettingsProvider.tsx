@@ -5,6 +5,7 @@ import type { Language } from '@/lib/translations'
 
 export type AccentTheme =
   | 'gold'
+  | 'water'
   | 'movies'
   | 'music'
   | 'sports'
@@ -15,6 +16,7 @@ export type AccentTheme =
 
 export const accentThemePresets: Record<AccentTheme, { a: string; b: string; name: string }> = {
   gold: { a: '#f4a30a', b: '#e67e22', name: 'Classic Gold' },
+  water: { a: '#22d3ee', b: '#3b82f6', name: 'Water Flow' },
   movies: { a: '#f59e0b', b: '#f97316', name: 'Movies Amber' },
   music: { a: '#a855f7', b: '#6366f1', name: 'Music Neon' },
   sports: { a: '#22c55e', b: '#06b6d4', name: 'Sports Aqua' },
@@ -29,6 +31,8 @@ interface AppSettings {
   accentTheme: AccentTheme
   language: Language
   audioQuality: string
+  subscriptionPlan: 'movie' | 'day' | 'week' | 'twoWeeks' | 'month'
+  paymentMethod: string
   favoriteLeagues: string[]
   favoriteTracks: string[]
   twoFactor: boolean
@@ -48,6 +52,8 @@ const defaultSettings: AppSettings = {
   accentTheme: 'gold',
   language: 'en',
   audioQuality: 'High',
+  subscriptionPlan: 'day',
+  paymentMethod: 'rw-mtn-airtel',
   favoriteLeagues: ['Champions League', 'NBA'],
   favoriteTracks: [],
   twoFactor: false,
@@ -62,18 +68,37 @@ const AppSettingsContext = createContext<AppSettingsContextType | undefined>(und
 const legacyLanguageMap: Record<string, Language> = {
   English: 'en',
   French: 'fr',
-  Luganda: 'lg',
   Kinyarwanda: 'rw',
 }
 
 function normalizeLanguage(value: unknown): Language {
-  if (value === 'en' || value === 'fr' || value === 'lg' || value === 'rw') {
-    return value
-  }
+  if (value === 'en' || value === 'fr' || value === 'rw') return value
+  if (value === 'lg') return 'en'
   if (typeof value === 'string' && legacyLanguageMap[value]) {
     return legacyLanguageMap[value]
   }
   return 'en'
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = hex.trim().replace('#', '')
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return null
+  const r = Number.parseInt(normalized.slice(0, 2), 16)
+  const g = Number.parseInt(normalized.slice(2, 4), 16)
+  const b = Number.parseInt(normalized.slice(4, 6), 16)
+  return { r, g, b }
+}
+
+function relativeLuminance({ r, g, b }: { r: number; g: number; b: number }) {
+  const srgb = [r, g, b].map((v) => v / 255).map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)))
+  return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2]
+}
+
+function pickAccentForeground(accentHex: string) {
+  const rgb = hexToRgb(accentHex)
+  if (!rgb) return '#000000'
+  const lum = relativeLuminance(rgb)
+  return lum > 0.55 ? '#000000' : '#ffffff'
 }
 
 export function AppSettingsProvider({ children }: { children: ReactNode }) {
@@ -102,17 +127,24 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('streamfy-settings', JSON.stringify(settings))
 
     // Apply theme
+    const root = document.documentElement
+    root.lang = settings.language
     if (settings.theme === 'light') {
-      document.documentElement.classList.add('light-theme')
-      document.documentElement.classList.remove('dark-theme')
+      root.classList.add('light-theme')
+      root.classList.remove('dark')
+      root.classList.remove('dark-theme')
+      root.style.colorScheme = 'light'
     } else {
-      document.documentElement.classList.add('dark-theme')
-      document.documentElement.classList.remove('light-theme')
+      root.classList.add('dark')
+      root.classList.remove('light-theme')
+      root.classList.remove('dark-theme')
+      root.style.colorScheme = 'dark'
     }
 
     const accent = accentThemePresets[settings.accentTheme] ?? accentThemePresets.gold
-    document.documentElement.style.setProperty('--app-accent-a', accent.a)
-    document.documentElement.style.setProperty('--app-accent-b', accent.b)
+    root.style.setProperty('--app-accent-a', accent.a)
+    root.style.setProperty('--app-accent-b', accent.b)
+    root.style.setProperty('--app-accent-fg', pickAccentForeground(accent.a))
   }, [settings, mounted])
 
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {

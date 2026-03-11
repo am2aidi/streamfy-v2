@@ -19,19 +19,12 @@ import {
 } from 'lucide-react'
 import { AdminLogo } from '@/components/admin/AdminLogo'
 import { useToast } from '@/hooks/use-toast'
+import { useAppSettings } from '@/components/AppSettingsProvider'
+import { getTranslation, languages, type TranslationKey } from '@/lib/translations'
 
 const ADMIN_SESSION_KEY = 'streamfy-admin-session'
 
-const navItems = [
-  { href: '/admin', label: 'Dashboard Overview', icon: BarChart3 },
-  { href: '/admin/movies', label: 'Movies Management', icon: Clapperboard },
-  { href: '/admin/sports', label: 'Sports Management', icon: Tv },
-  { href: '/admin/music', label: 'Music Management', icon: Music2 },
-  { href: '/admin/ads', label: 'Ads Management', icon: Megaphone },
-  { href: '/admin/users', label: 'Users Management', icon: Users },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
-]
+type AdminNavItem = { href: string; labelKey: TranslationKey; icon: typeof BarChart3 }
 
 const pageAccentByHref: Record<string, { a: string; b: string }> = {
   '/admin': { a: '#22c55e', b: '#14b8a6' },
@@ -48,7 +41,23 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const { toast } = useToast()
+  const { settings, updateSetting } = useAppSettings()
   const [authorized, setAuthorized] = useState(false)
+  const t = (key: TranslationKey) => getTranslation(settings.language, key)
+
+  const navItems = useMemo<AdminNavItem[]>(
+    () => [
+      { href: '/admin', labelKey: 'dashboardOverview', icon: BarChart3 },
+      { href: '/admin/movies', labelKey: 'moviesManagement', icon: Clapperboard },
+      { href: '/admin/sports', labelKey: 'sportsManagement', icon: Tv },
+      { href: '/admin/music', labelKey: 'musicManagement', icon: Music2 },
+      { href: '/admin/ads', labelKey: 'adsManagement', icon: Megaphone },
+      { href: '/admin/users', labelKey: 'usersManagement', icon: Users },
+      { href: '/admin/analytics', labelKey: 'analytics', icon: BarChart3 },
+      { href: '/admin/settings', labelKey: 'settings', icon: Settings },
+    ],
+    [settings.language]
+  )
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem(ADMIN_SESSION_KEY) : null
@@ -61,13 +70,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   const activeLabel = useMemo(() => {
     const active = navItems.find((item) => (item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href)))
-    return active?.label ?? 'Admin'
-  }, [pathname])
+    return active ? t(active.labelKey) : 'Admin'
+  }, [pathname, navItems, settings.language])
 
   const accent = useMemo(() => {
     const active = navItems.find((item) => (item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href)))
     return (active && pageAccentByHref[active.href]) || pageAccentByHref['/admin']
-  }, [pathname])
+  }, [pathname, navItems])
 
   const accentVars = useMemo(
     () =>
@@ -83,7 +92,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
       <div className="min-h-screen bg-gradient-to-br from-[#020617] via-[#0f172a] to-black text-white">
         <div className="flex min-h-screen items-center justify-center">
           <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-slate-300 backdrop-blur-xl">
-            Checking admin session...
+            {t('checkingAdminSession')}
           </div>
         </div>
       </div>
@@ -118,7 +127,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 }
               >
                 <item.icon size={17} />
-                <span>{item.label}</span>
+                <span>{t(item.labelKey)}</span>
               </Link>
             )
           })}
@@ -132,7 +141,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           className="mt-10 flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-slate-300 transition-colors hover:border-[#EF4444]/40 hover:text-[#EF4444]"
         >
           <LogOut size={17} />
-          Logout
+          {t('adminLogout')}
         </button>
       </aside>
 
@@ -144,40 +153,54 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-30 border-b border-white/10 bg-[#080e1d]/72 px-4 py-4 backdrop-blur-2xl sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Admin Workspace</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-slate-400">{t('adminWorkspace')}</p>
               <h1 className="text-lg font-semibold text-white">{activeLabel}</h1>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
+              <select
+                value={settings.language}
+                onChange={(e) => updateSetting('language', e.target.value as typeof settings.language)}
+                className="hidden rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-200 sm:block"
+                aria-label={t('languageMenu')}
+                title={t('languageMenu')}
+              >
+                {languages.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.name}
+                  </option>
+                ))}
+              </select>
+
               <div className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 sm:flex">
                 <Search size={15} className="text-slate-400" />
                 <input
-                  placeholder="Search content, users, ads..."
+                  placeholder={t('adminSearchPlaceholder')}
                   className="w-56 bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none"
                 />
               </div>
 
               <button
-                onClick={() => toast({ title: 'Notifications', description: '3 admin alerts pending review.' })}
+                onClick={() => toast({ title: t('notifications'), description: t('notificationsPrototypeDesc') })}
                 className="relative rounded-xl border border-white/10 bg-white/[0.03] p-2.5 text-slate-300 transition-colors hover:text-white"
-                aria-label="Notifications"
+                aria-label={t('notifications')}
               >
                 <Bell size={16} />
                 <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full" style={{ backgroundColor: accent.a }} />
               </button>
 
               <button
-                onClick={() => toast({ title: 'Quick Add', description: 'Use Movies/Sports/Music pages to add content.' })}
+                onClick={() => toast({ title: t('addContent'), description: 'Use Movies/Sports/Music pages to add content.' })}
                 className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-black transition-transform hover:scale-[1.02]"
                 style={{ backgroundImage: `linear-gradient(to right, ${accent.a}, ${accent.b})`, boxShadow: `0 10px 25px ${accent.a}44` }}
               >
                 <Plus size={15} />
-                Add Content
+                {t('addContent')}
               </button>
 
               <div className="inline-flex items-center gap-2 rounded-xl px-2.5 py-1.5" style={{ border: `1px solid ${accent.a}55`, background: `${accent.a}1a` }}>
                 <ShieldCheck size={14} style={{ color: accent.a }} />
-                <span className="text-[11px] font-semibold" style={{ color: accent.a }}>ADMIN PANEL</span>
+                <span className="text-[11px] font-semibold" style={{ color: accent.a }}>{t('adminPanel')}</span>
               </div>
 
               <div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-black" style={{ backgroundImage: `linear-gradient(to bottom right, ${accent.a}, ${accent.b})` }}>

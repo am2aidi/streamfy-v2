@@ -7,12 +7,16 @@ import { ChevronRight, Play, Plus } from 'lucide-react'
 import { musicTracks } from '@/lib/music-data'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/hooks/use-toast'
+import { useAppSettings } from '@/components/AppSettingsProvider'
+import { getTranslation } from '@/lib/translations'
 
 const categories = ['New Music', 'Rap', 'Pop', 'Featured Albums', 'Trending']
 
 export function HomeMusicSection() {
   const { requireAuth } = useAuth()
   const { toast } = useToast()
+  const { settings } = useAppSettings()
+  const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const previewRef = useRef<HTMLAudioElement | null>(null)
 
   const [activeCategory, setActiveCategory] = useState('New Music')
@@ -76,7 +80,7 @@ export function HomeMusicSection() {
           // ignore preview failures
         }
       },
-      'Sign in to listen to music previews.'
+      t('authSigninPrompt')
     )
   }
 
@@ -84,11 +88,11 @@ export function HomeMusicSection() {
     <section className="flex flex-col gap-4">
       <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Music</h2>
-          <p className="text-sm text-gray-400">Albums, categories, and new releases</p>
+          <h2 className="text-2xl font-bold text-white">{t('music')}</h2>
+          <p className="text-sm text-gray-400">{t('albumsCategoriesReleases')}</p>
         </div>
         <Link href="/music" className="flex items-center gap-1 text-[#f4a30a] text-sm hover:underline">
-          See All <ChevronRight size={14} />
+          {t('seeAll')} <ChevronRight size={14} />
         </Link>
       </div>
 
@@ -116,7 +120,7 @@ export function HomeMusicSection() {
           >
             {years.map((year) => (
               <option key={year} value={year}>
-                Year: {year}
+                {t('year')}: {year}
               </option>
             ))}
           </select>
@@ -127,7 +131,7 @@ export function HomeMusicSection() {
           >
             {genres.map((genre) => (
               <option key={genre} value={genre}>
-                Genre: {genre}
+                {t('genre')}: {genre}
               </option>
             ))}
           </select>
@@ -141,7 +145,7 @@ export function HomeMusicSection() {
               <Image src={featured.image} alt={featured.title} fill className="object-cover" loading="lazy" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs uppercase text-gray-500">Featured Album</p>
+              <p className="text-xs uppercase text-gray-500">{t('featuredAlbum')}</p>
               <p className="text-white text-sm font-semibold streamfy-soft-float truncate">{featured.title}</p>
               <p className="text-gray-400 text-xs truncate">
                 {featured.artist} | {featured.year}
@@ -152,7 +156,7 @@ export function HomeMusicSection() {
               className="inline-flex items-center gap-2 rounded-lg bg-[#f4a30a] px-3 py-2 text-xs font-semibold text-black"
             >
               <Play size={13} fill="black" />
-              {previewingId === featured.id ? 'Playing...' : 'Play Preview'}
+              {previewingId === featured.id ? t('playing') : t('playPreview')}
             </button>
           </div>
         </article>
@@ -183,14 +187,14 @@ export function HomeMusicSection() {
                     const next = inLibrary ? library.filter((id) => id !== album.id) : [...library, album.id]
                     setLibrary(next)
                     toast({
-                      title: inLibrary ? 'Removed from library' : 'Added to library',
+                      title: inLibrary ? t('removedFromLibrary') : t('addedToLibrary'),
                       description: album.title,
                     })
                   }}
                   className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/15"
                 >
                   <Plus size={12} />
-                  {library.includes(album.id) ? 'In Library' : 'Add to Library'}
+                  {library.includes(album.id) ? t('inLibrary') : t('addToLibrary')}
                 </button>
               </div>
             </div>

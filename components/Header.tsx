@@ -29,7 +29,15 @@ export function Header() {
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
-            <Image src="/streamfy-s-logo.svg" alt="Streamfy Logo" width={22} height={22} className="streamfy-logo-cinematic" />
+            <span
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.25)]"
+              style={{
+                backgroundImage: 'linear-gradient(135deg, var(--app-accent-a), var(--app-accent-b))',
+              }}
+              aria-hidden="true"
+            >
+              <Image src="/streamfy-s-logo.svg" alt="Streamfy Logo" width={30} height={30} className="streamfy-logo-cinematic" />
+            </span>
             <span className="text-sm text-gray-400">{t('welcome')}</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">{t('discoverEnjoy')}</h1>
@@ -68,12 +76,12 @@ export function Header() {
         <button
           onClick={() =>
             toast({
-              title: 'Notifications',
-              description: 'You have 3 new alerts: live match, new release, and playlist update.',
+              title: t('notifications'),
+              description: t('notificationsPrototypeDesc'),
             })
           }
           className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-          aria-label="Notifications"
+          aria-label={t('notifications')}
         >
           <Bell size={16} />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#f4a30a]" />
@@ -82,7 +90,11 @@ export function Header() {
         <div className="relative">
           <button
             onClick={() => setShowMenu((prev) => !prev)}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#f4a30a] to-[#e67e22] text-black"
+            className="flex h-9 w-9 items-center justify-center rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] text-[color:var(--app-accent-fg)]"
+            style={{
+              background:
+                'linear-gradient(135deg, color-mix(in oklab, var(--app-accent-a) 78%, white), color-mix(in oklab, var(--app-accent-b) 72%, white))',
+            }}
             aria-label="Account menu"
           >
             <UserCircle2 size={17} />
@@ -91,7 +103,7 @@ export function Header() {
           {showMenu && (
             <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-white/10 bg-black/95 p-2">
               <div className="border-b border-white/10 px-3 py-2">
-                <p className="text-sm font-semibold text-white">{isAuthenticated ? user?.email ?? user?.phone ?? 'User' : 'Guest mode'}</p>
+                <p className="text-sm font-semibold text-white">{isAuthenticated ? user?.email ?? user?.phone ?? 'User' : t('guestMode')}</p>
                 <p className="text-xs text-gray-400">{languageName}</p>
               </div>
               {!isAuthenticated ? (
@@ -120,7 +132,7 @@ export function Header() {
 
               <MenuAction
                 icon={Settings}
-                label="Settings"
+                label={t('settings')}
                 onClick={() => {
                   router.push('/settings')
                   setShowMenu(false)
@@ -128,28 +140,28 @@ export function Header() {
               />
               <MenuAction
                 icon={Globe}
-                label={`Language: ${languageName}`}
+                label={`${t('languageMenu')}: ${languageName}`}
                 onClick={() =>
                   toast({
-                    title: 'Language',
-                    description: `Current: ${languageName}`,
+                    title: t('languageMenu'),
+                    description: `${t('languageCurrent')}: ${languageName}`,
                   })
                 }
               />
               <MenuAction
                 icon={CircleHelp}
-                label="Get help"
+                label={t('getHelp')}
                 onClick={() =>
                   toast({
-                    title: 'Help',
-                    description: 'Support center prototype action.',
+                    title: t('getHelp'),
+                    description: t('helpPrototypeDesc'),
                   })
                 }
               />
               <div className="my-1 border-t border-white/10" />
               <MenuAction
                 icon={ArrowUpCircle}
-                label="Upgrade plan"
+                label={t('upgradePlan')}
                 onClick={() => {
                   router.push('/settings')
                   setShowMenu(false)
@@ -157,17 +169,17 @@ export function Header() {
               />
               <MenuAction
                 icon={Download}
-                label="Get apps and extensions"
+                label={t('getAppsExtensions')}
                 onClick={() =>
                   toast({
-                    title: 'Apps',
-                    description: 'Apps and extensions prototype action.',
+                    title: t('getAppsExtensions'),
+                    description: t('appsPrototypeDesc'),
                   })
                 }
               />
               <MenuAction
                 icon={Gift}
-                label="Gift Streamfy"
+                label={t('giftStreamfy')}
                 onClick={() => {
                   router.push('/settings?mode=gift')
                   setShowMenu(false)
@@ -175,7 +187,7 @@ export function Header() {
               />
               <MenuAction
                 icon={Info}
-                label="Learn more"
+                label={t('learnMore')}
                 onClick={() => {
                   router.push('/about')
                   setShowMenu(false)

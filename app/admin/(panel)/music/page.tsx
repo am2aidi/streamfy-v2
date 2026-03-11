@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Play } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useFilterOptions } from '@/lib/admin-filters'
 
 type MusicRow = {
   title: string
@@ -21,6 +22,7 @@ const initialRows: MusicRow[] = [
 
 export default function AdminMusicPage() {
   const { toast } = useToast()
+  const genreOptions = useFilterOptions('music')
   const [rows, setRows] = useState<MusicRow[]>(initialRows)
   const [query, setQuery] = useState('')
   const [editIndex, setEditIndex] = useState<number | null>(null)
@@ -70,12 +72,13 @@ export default function AdminMusicPage() {
   return (
     <div className="space-y-5">
       <h2 className="text-xl font-bold">Music Management</h2>
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Filter by title, artist, genre..."
-        className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm"
-      />
+      <div className="mb-3 flex flex-wrap gap-2">
+        {genreOptions.map((genre) => (
+          <span key={genre} className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white">
+            {genre}
+          </span>
+        ))}
+      </div>
       <div className="grid gap-3 md:grid-cols-3">
         <button onClick={() => openAdd('song')} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-left text-sm font-semibold" style={{ borderColor: 'color-mix(in oklab, var(--admin-accent-a) 35%, transparent)' }}>Add New Song</button>
         <button onClick={() => openAdd('album')} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-left text-sm font-semibold" style={{ borderColor: 'color-mix(in oklab, var(--admin-accent-a) 35%, transparent)' }}>Upload Album</button>
@@ -161,10 +164,9 @@ export default function AdminMusicPage() {
               <input value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="Song title" className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
               <input value={form.artist} onChange={(e) => setForm((p) => ({ ...p, artist: e.target.value }))} placeholder="Artist" className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
               <select value={form.genre} onChange={(e) => setForm((p) => ({ ...p, genre: e.target.value }))} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm">
-                <option>Pop</option>
-                <option>Rap</option>
-                <option>EDM</option>
-                <option>Synthwave</option>
+                {genreOptions.map((genre) => (
+                  <option key={genre}>{genre}</option>
+                ))}
               </select>
               <input value={form.duration} onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))} placeholder="3:00" className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
               <input value={form.cover ?? ''} onChange={(e) => setForm((p) => ({ ...p, cover: e.target.value }))} placeholder="Cover URL (optional)" className="md:col-span-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />

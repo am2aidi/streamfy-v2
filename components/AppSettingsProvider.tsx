@@ -35,6 +35,10 @@ interface AppSettings {
   paymentMethod: string
   favoriteLeagues: string[]
   favoriteTracks: string[]
+  watchlistMovies: string[]
+  watchlistTracks: string[]
+  watchlistMatches: string[]
+  watchlistShorts: string[]
   twoFactor: boolean
   loginNotifs: boolean
   pushNotifs: boolean
@@ -56,6 +60,10 @@ const defaultSettings: AppSettings = {
   paymentMethod: 'rw-mtn-airtel',
   favoriteLeagues: ['Champions League', 'NBA'],
   favoriteTracks: [],
+  watchlistMovies: [],
+  watchlistTracks: [],
+  watchlistMatches: [],
+  watchlistShorts: [],
   twoFactor: false,
   loginNotifs: true,
   pushNotifs: true,

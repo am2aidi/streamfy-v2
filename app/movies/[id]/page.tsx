@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
-import { Play, Download, ChevronLeft, Languages, Maximize2, Volume2 } from 'lucide-react'
+import { Download, ChevronLeft, Heart, Languages, Maximize2, Play, Volume2 } from 'lucide-react'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { getMovieById, movieCards } from '@/lib/movies-data'
@@ -19,7 +19,7 @@ export default function MovieDetailPage() {
   const movie = useMemo(() => getMovieById(params.id), [params.id])
   const { toast } = useToast()
   const { requireAuth } = useAuth()
-  const { settings } = useAppSettings()
+  const { settings, updateSetting } = useAppSettings()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const [showWatch, setShowWatch] = useState(false)
   const [showDownload, setShowDownload] = useState(false)
@@ -27,6 +27,7 @@ export default function MovieDetailPage() {
   const [quality, setQuality] = useState('720p')
   const [volume, setVolume] = useState(80)
   const [progress, setProgress] = useState(38)
+  const inWatchlist = movie ? settings.watchlistMovies.includes(movie.id) : false
 
   if (!movie) {
     return (
@@ -69,6 +70,22 @@ export default function MovieDetailPage() {
                 >
                   <Play size={16} fill="black" />
                   {t('watchNow')}
+                </button>
+                <button
+                  onClick={() => {
+                    const next = inWatchlist
+                      ? settings.watchlistMovies.filter((id) => id !== movie.id)
+                      : [...settings.watchlistMovies, movie.id]
+                    updateSetting('watchlistMovies', next)
+                    toast({
+                      title: inWatchlist ? t('removedFromWatchLater') : t('addedToWatchLater'),
+                      description: movie.title,
+                    })
+                  }}
+                  className="border border-white/20 text-white px-4 py-2.5 rounded-xl font-semibold inline-flex items-center gap-2 hover:bg-white/5"
+                >
+                  <Heart size={16} fill={inWatchlist ? '#f4a30a' : 'transparent'} className={inWatchlist ? 'text-[#f4a30a]' : ''} />
+                  {inWatchlist ? t('saved') : t('watchLater')}
                 </button>
                 <button
                   onClick={() => requireAuth(() => setShowDownload(true), t('authSigninPrompt'))}

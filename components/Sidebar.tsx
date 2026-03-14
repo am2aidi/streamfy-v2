@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, MessageCircle, Music, Settings, Share2, Trophy, Tv2 } from 'lucide-react'
+import { Heart, Home, Info, Music, PlaySquare, Search, Settings, Share2, Sparkles, Trophy, Tv2 } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation } from '@/lib/translations'
 import { useToast } from '@/hooks/use-toast'
@@ -14,8 +14,7 @@ export function Sidebar() {
   const { toast } = useToast()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
 
-  const isActive = (path: string) => pathname === path
-  const showSocialDock = pathname.startsWith('/movies') || pathname.startsWith('/music') || pathname.startsWith('/sports')
+  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href))
 
   const sharePage = async () => {
     const url = typeof window !== 'undefined' ? window.location.href : ''
@@ -53,36 +52,40 @@ export function Sidebar() {
           {/* Navigation */}
           <nav className="flex flex-col gap-2">
             <NavItemLink href="/" label={t('home')} icon={Home} active={isActive('/')} />
-            <NavItemLink href="/music" label={t('music')} icon={Music} active={isActive('/music')} />
-            <NavItemLink href="/sports" label={t('sports')} icon={Trophy} active={isActive('/sports')} />
+            <NavItemLink href="/search" label={t('search')} icon={Search} active={isActive('/search')} />
+            <div className="my-1 h-px w-8 bg-white/10" />
             <NavItemLink href="/movies" label={t('movies')} icon={Tv2} active={isActive('/movies')} />
+            <NavItemLink href="/music" label={t('music')} icon={Music} active={isActive('/music')} />
+            <NavItemLink href="/sports" label="Live Sports" icon={Trophy} active={isActive('/sports')} />
+            <NavItemLink href="/anime" label="Anime" icon={Sparkles} active={isActive('/anime')} />
+            <NavItemLink href="/shorts" label="Shorts" icon={PlaySquare} active={isActive('/shorts')} />
+            <NavItemLink href="/watchlist" label="Watchlist" icon={Heart} active={isActive('/watchlist')} />
             <div className="my-1 h-px w-8 bg-white/10" />
             <NavItemLink href="/settings" label={t('settings')} icon={Settings} active={isActive('/settings')} />
+            <NavItemLink href="/about" label={t('learnMore')} icon={Info} active={isActive('/about')} />
           </nav>
 
-          {/* Social Icon */}
-          {showSocialDock ? (
-            <div className="mt-3 flex flex-col items-center justify-center gap-2">
-              <button
-                onClick={sharePage}
-                title="Share"
-                aria-label="Share"
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/[0.08] hover:text-white transition-colors"
-              >
-                <Share2 size={15} />
-              </button>
-              <a
-                href="https://wa.me/250700000000"
-                target="_blank"
-                rel="noreferrer"
-                title="WhatsApp"
-                aria-label="WhatsApp"
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-emerald-400/35 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 transition-colors"
-              >
-                <Image src="/whatsapp.svg" alt="" width={18} height={18} />
-              </a>
-            </div>
-          ) : null}
+          {/* Social Dock */}
+          <div className="mt-auto flex flex-col items-center justify-center gap-2 pt-3">
+            <button
+              onClick={sharePage}
+              title="Share"
+              aria-label="Share"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/[0.08] hover:text-white transition-colors"
+            >
+              <Share2 size={15} />
+            </button>
+            <a
+              href="https://wa.me/250700000000"
+              target="_blank"
+              rel="noreferrer"
+              title="WhatsApp"
+              aria-label="WhatsApp"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-emerald-400/35 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 transition-colors"
+            >
+              <Image src="/whatsapp.svg" alt="" width={18} height={18} />
+            </a>
+          </div>
         </div>
       </div>
     </aside>

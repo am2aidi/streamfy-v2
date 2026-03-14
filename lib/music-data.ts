@@ -10,6 +10,7 @@ export interface MusicTrack {
   url?: string
   popularity?: number
   releaseDate?: string // ISO date
+  lyrics?: string
 }
 
 // Helper utilities to generate sample tracks
@@ -41,6 +42,19 @@ export const musicTracks: MusicTrack[] = Array.from({ length: 100 }).map((_, i) 
   const url = sampleUrls[i % sampleUrls.length]
   const popularity = Math.max(0, 100 - (i % 100))
   const releaseDate = new Date(Date.now() - i * 86400000).toISOString()
+  const lyrics = [
+    `(${artist}) ${title}`,
+    '',
+    'Verse',
+    "I’m chasing lights in the city glow,",
+    'Counting moments, moving slow,',
+    'Every heartbeat keeps the rhythm close,',
+    'Hold on tight—don’t let it go.',
+    '',
+    'Chorus',
+    `${title}, ${title}, let it play,`,
+    'Sing it loud and fade away,',
+  ].join('\n')
   return {
     id: `track-${i + 1}`,
     title,
@@ -53,6 +67,7 @@ export const musicTracks: MusicTrack[] = Array.from({ length: 100 }).map((_, i) 
     url,
     popularity,
     releaseDate,
+    lyrics: i < 30 ? lyrics : undefined,
   }
 })
 

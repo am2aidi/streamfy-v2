@@ -4,19 +4,25 @@ import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { MusicSection } from '@/components/MusicSection'
 import { MusicPlayer } from '@/components/MusicPlayer'
-import { Music, Star } from 'lucide-react'
+import { Heart, Music, Star } from 'lucide-react'
 import Link from 'next/link'
 import { musicTracks } from '@/lib/music-data'
 import Image from 'next/image'
 import { useAppSettings } from '@/components/AppSettingsProvider'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
 import { getTranslation } from '@/lib/translations'
+import { NewsFeed } from '@/components/NewsFeed'
+import { getNewsByCategory } from '@/lib/news-data'
+import { shortVideos } from '@/lib/shorts-data'
 
 export default function MusicPage() {
   const { settings, updateSetting } = useAppSettings()
   const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [view, setView] = useState<'all' | 'news' | 'reels'>('all')
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
+  const musicNews = useMemo(() => getNewsByCategory('music'), [])
+  const musicReels = useMemo(() => shortVideos.filter((s) => s.category === 'music').slice(0, 8), [])
 
   const filteredTracks = settings.favoriteTracks && favoritesOnly
     ? musicTracks.filter((t) => settings.favoriteTracks.includes(t.id))
@@ -36,7 +42,65 @@ export default function MusicPage() {
             <p className="text-gray-400 text-sm mt-1">{t('listenTrendingSongs')}</p>
           </div>
 
-          <MusicSection />
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'news', label: 'News' },
+              { id: 'reels', label: 'Reels' },
+            ].map((x) => (
+              <button
+                key={x.id}
+                onClick={() => setView(x.id as typeof view)}
+                className={`rounded-full border px-4 py-2 text-sm ${
+                  view === x.id
+                    ? 'border-[#f4a30a]/60 bg-[#f4a30a]/15 text-[#f4a30a]'
+                    : 'border-white/15 bg-white/5 text-gray-300'
+                }`}
+              >
+                {x.label}
+              </button>
+            ))}
+          </div>
+
+          {view === 'news' ? (
+            <NewsFeed title="Music News" subtitle="Entertainment updates, artists, and releases." items={musicNews} />
+          ) : null}
+
+          {view === 'reels' ? (
+            <section className="flex flex-col gap-3">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <h3 className="text-white text-xl font-bold">Music Reels</h3>
+                  <p className="text-gray-400 text-sm mt-1">Short clips: lyrics moments, hooks, and highlights.</p>
+                </div>
+                <Link href="/shorts" className="text-[#f4a30a] text-sm hover:underline">
+                  See all
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {musicReels.map((s) => (
+                  <Link
+                    key={s.id}
+                    href={`/shorts/${s.id}`}
+                    className="group overflow-hidden rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <div className="relative h-48">
+                      <Image src={s.image} alt={s.title} fill className="object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <p className="text-white text-sm font-semibold line-clamp-2">{s.title}</p>
+                        <p className="text-gray-300 text-xs mt-1 line-clamp-1">0:{s.durationSeconds.toString().padStart(2, '0')}s</p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {view === 'all' ? (
+            <>
+              <MusicSection />
 
           <section className="flex flex-col gap-4">
             <h3 className="text-white text-xl font-bold">{t('allTracks')}</h3>
@@ -59,6 +123,20 @@ export default function MusicPage() {
                       </div>
                     </div>
                   </Link>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      const isSaved = settings.watchlistTracks.includes(track.id)
+                      const next = isSaved
+                        ? settings.watchlistTracks.filter((id) => id !== track.id)
+                        : [...settings.watchlistTracks, track.id]
+                      updateSetting('watchlistTracks', next)
+                    }}
+                    className="absolute top-2 left-2 text-white/70 hover:text-[#f4a30a]"
+                    aria-label={settings.watchlistTracks.includes(track.id) ? 'Remove from watchlist' : 'Add to watchlist'}
+                  >
+                    <Heart size={18} fill={settings.watchlistTracks.includes(track.id) ? '#f4a30a' : 'transparent'} />
+                  </button>
                   <button
                     onClick={(e) => {
                       e.preventDefault()
@@ -97,6 +175,8 @@ export default function MusicPage() {
               ))}
             </div>
           </section>
+            </>
+          ) : null}
         </main>
 
         <MusicPlayer />

@@ -15,20 +15,19 @@ const featuredMeta: Record<string, { season: string; episode: string; director: 
   'dark-pursuit': { season: 'S1', episode: 'E5', director: 'N. Adair' },
 }
 
-export function MoviesSection() {
+export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof movieCards)[number]['type'] } = {}) {
   const { toast } = useToast()
   const { requireAuth } = useAuth()
-  const { settings } = useAppSettings()
+  const { settings, updateSetting } = useAppSettings()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
 
   const [genreFilter, setGenreFilter] = useState('All')
+  const [typeFilter, setTypeFilter] = useState<'All' | (typeof movieCards)[number]['type']>(defaultType ?? 'All')
   const [yearFilter, setYearFilter] = useState('All')
   const [ratingFilter, setRatingFilter] = useState('All')
   const [secondaryFilter, setSecondaryFilter] = useState('All genres')
   const [languageFilter, setLanguageFilter] = useState<'All' | Language>('All')
   const [search, setSearch] = useState('')
-  const [watchLater, setWatchLater] = useState<string[]>([])
-  const [myList, setMyList] = useState<string[]>([])
 
   const genres = useMemo(() => ['All', ...Array.from(new Set(movieCards.map((movie) => movie.genre)))], [])
   const years = useMemo(
@@ -39,6 +38,7 @@ export function MoviesSection() {
   const filteredMovies = useMemo(() => {
     return movieCards.filter((movie) => {
       const matchesGenre = genreFilter === 'All' || movie.genre === genreFilter
+      const matchesType = typeFilter === 'All' || movie.type === typeFilter
       const matchesYear = yearFilter === 'All' || String(movie.year) === yearFilter
       const matchesRating = ratingFilter === 'All' || movie.rating >= Number(ratingFilter)
       const matchesSecondary = secondaryFilter === 'All genres' || movie.genre === secondaryFilter
@@ -49,15 +49,16 @@ export function MoviesSection() {
         movie.title.toLowerCase().includes(query) ||
         movie.description.toLowerCase().includes(query) ||
         movie.genre.toLowerCase().includes(query)
-      return matchesGenre && matchesYear && matchesRating && matchesSecondary && matchesLanguage && matchesSearch
+      return matchesGenre && matchesType && matchesYear && matchesRating && matchesSecondary && matchesLanguage && matchesSearch
     })
-  }, [genreFilter, ratingFilter, search, secondaryFilter, yearFilter, languageFilter])
+  }, [genreFilter, ratingFilter, search, secondaryFilter, yearFilter, languageFilter, typeFilter])
 
   const featured = filteredMovies.find((movie) => movie.id === 'kylexy') ?? filteredMovies[0] ?? movieCards[0]
   const listMovies = filteredMovies.filter((movie) => movie.id !== featured.id)
 
   const clearAllFilters = () => {
     setGenreFilter('All')
+    setTypeFilter(defaultType ?? 'All')
     setYearFilter('All')
     setRatingFilter('All')
     setSecondaryFilter('All genres')
@@ -96,7 +97,7 @@ export function MoviesSection() {
       </div>
 
       <div className="rounded-3xl border border-white/10 bg-[#071325] p-4 md:p-5">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto_auto_auto]">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto_auto_auto_auto]">
           <div className="relative">
             <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/50" />
             <input
@@ -121,6 +122,20 @@ export function MoviesSection() {
                     {year}
                   </option>
                 ))}
+            </select>
+            <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/80" />
+          </div>
+
+          <div className="relative">
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+              className="appearance-none rounded-2xl border border-white/15 bg-black/45 px-4 py-3 pr-10 text-sm text-white"
+            >
+              <option value="All">All types</option>
+              <option value="movie">Movies</option>
+              <option value="series">TV Shows</option>
+              <option value="animation">Animation</option>
             </select>
             <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/80" />
           </div>
@@ -224,9 +239,11 @@ export function MoviesSection() {
               </Link>
               <button
                 onClick={() => {
-                  const inWatchLater = watchLater.includes(featured.id)
-                  const next = inWatchLater ? watchLater.filter((id) => id !== featured.id) : [...watchLater, featured.id]
-                  setWatchLater(next)
+                  const inWatchLater = settings.watchlistMovies.includes(featured.id)
+                  const next = inWatchLater
+                    ? settings.watchlistMovies.filter((id) => id !== featured.id)
+                    : [...settings.watchlistMovies, featured.id]
+                  updateSetting('watchlistMovies', next)
                   toast({
                     title: inWatchLater ? t('removedFromWatchLater') : t('addedToWatchLater'),
                     description: featured.title,
@@ -244,51 +261,59 @@ export function MoviesSection() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {listMovies.map((movie, i) => (
-          <article key={movie.id} className="overflow-hidden rounded-xl border border-white/10 bg-white/5">
-            <div className="relative h-56">
-              <Image
-                src={movie.image}
-                alt={movie.title}
-                fill
-                loading="lazy"
-                className="object-cover transition-transform duration-500 hover:scale-[1.03] will-change-transform"
-              />
-            </div>
-            <div className="space-y-2 p-4">
-              <p className="text-lg font-semibold text-white">{movie.title}</p>
-              <p className="text-xs text-gray-400">
-                S{(i % 3) + 1} | E{(i % 9) + 1} | {movie.year}
-              </p>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-0.5 text-[#f4a30a]">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={star} size={13} fill={movie.rating / 2 >= star ? 'currentColor' : 'none'} />
-                  ))}
+          <Link
+            key={movie.id}
+            href={`/movies/${movie.id}`}
+            className="group overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-colors hover:bg-white/10"
+            aria-label={movie.title}
+          >
+            <article>
+              <div className="relative h-56">
+                <Image
+                  src={movie.image}
+                  alt={movie.title}
+                  fill
+                  loading="lazy"
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03] will-change-transform"
+                />
+              </div>
+              <div className="space-y-2 p-4">
+                <p className="text-lg font-semibold text-white">{movie.title}</p>
+                <p className="text-xs text-gray-400">
+                  S{(i % 3) + 1} | E{(i % 9) + 1} | {movie.year}
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-0.5 text-[#f4a30a]">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star key={star} size={13} fill={movie.rating / 2 >= star ? 'currentColor' : 'none'} />
+                    ))}
+                  </div>
+                  <span className="text-xs text-gray-300">{movie.rating.toFixed(1)}</span>
                 </div>
-                <span className="text-xs text-gray-300">{movie.rating.toFixed(1)}</span>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      const inList = settings.watchlistMovies.includes(movie.id)
+                      const next = inList
+                        ? settings.watchlistMovies.filter((id) => id !== movie.id)
+                        : [...settings.watchlistMovies, movie.id]
+                      updateSetting('watchlistMovies', next)
+                      toast({
+                        title: inList ? 'Removed from list' : 'Added to list',
+                        description: movie.title,
+                      })
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white hover:bg-white/10"
+                  >
+                    <Plus size={12} />
+                    Add to list
+                  </button>
+                  <span className="rounded-lg bg-[#f4a30a] px-3 py-1.5 text-xs font-semibold text-black">More info</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  onClick={() => {
-                    const inList = myList.includes(movie.id)
-                    const next = inList ? myList.filter((id) => id !== movie.id) : [...myList, movie.id]
-                    setMyList(next)
-                    toast({
-                      title: inList ? 'Removed from list' : 'Added to list',
-                      description: movie.title,
-                    })
-                  }}
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white hover:bg-white/10"
-                >
-                  <Plus size={12} />
-                  Add to list
-                </button>
-                <Link href={`/movies/${movie.id}`} className="rounded-lg bg-[#f4a30a] px-3 py-1.5 text-xs font-semibold text-black">
-                  More info
-                </Link>
-              </div>
-            </div>
-          </article>
+            </article>
+          </Link>
         ))}
       </div>
     </section>

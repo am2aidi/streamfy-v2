@@ -82,7 +82,7 @@ export function MusicPlayer() {
   const progressPct = duration ? (progress / duration) * 100 : 0
 
   return (
-    <div className="fixed bottom-0 left-[220px] right-0 z-50 bg-black/95 backdrop-blur-md border-t border-white/10">
+    <div className="fixed bottom-0 left-[92px] right-0 z-50 bg-black/95 backdrop-blur-md border-t border-white/10">
       <div className="flex flex-col">
         {/* Progress Bar */}
         <div className="flex items-center gap-3 px-6 pt-2">

@@ -9,6 +9,7 @@ export interface MovieItem {
   year: number
   rating: number
   genre: string
+  type: 'movie' | 'series' | 'animation'
   language: 'en' | 'fr' | 'rw'
 }
 
@@ -24,6 +25,7 @@ export const movieCards: MovieItem[] = [
     year: 2024,
     rating: 8.8,
     genre: 'Thriller',
+    type: 'movie',
     language: 'en',
   },
   {
@@ -35,6 +37,7 @@ export const movieCards: MovieItem[] = [
     year: 2025,
     rating: 8.2,
     genre: 'Action',
+    type: 'movie',
     language: 'fr',
   },
   {
@@ -46,6 +49,7 @@ export const movieCards: MovieItem[] = [
     year: 2023,
     rating: 8.6,
     genre: 'Drama',
+    type: 'movie',
     language: 'en',
   },
   {
@@ -57,6 +61,7 @@ export const movieCards: MovieItem[] = [
     year: 2025,
     rating: 8.1,
     genre: 'Mystery',
+    type: 'movie',
     language: 'rw',
   },
   {
@@ -68,6 +73,7 @@ export const movieCards: MovieItem[] = [
     year: 2024,
     rating: 7.9,
     genre: 'Sports',
+    type: 'movie',
     language: 'en',
   },
   {
@@ -79,6 +85,7 @@ export const movieCards: MovieItem[] = [
     year: 2026,
     rating: 9.1,
     genre: 'Sci-Fi',
+    type: 'series',
     language: 'rw',
   },
   {
@@ -90,6 +97,7 @@ export const movieCards: MovieItem[] = [
     year: 2025,
     rating: 8.0,
     genre: 'Comedy',
+    type: 'movie',
     language: 'fr',
   },
   {
@@ -101,6 +109,7 @@ export const movieCards: MovieItem[] = [
     year: 2026,
     rating: 8.3,
     genre: 'Action',
+    type: 'movie',
     language: 'en',
   },
   {
@@ -112,6 +121,7 @@ export const movieCards: MovieItem[] = [
     year: 2026,
     rating: 8.7,
     genre: 'Sci-Fi',
+    type: 'animation',
     language: 'fr',
   },
 ]

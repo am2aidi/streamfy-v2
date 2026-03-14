@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { getMatchById } from '@/lib/sports-data'
-import { ChevronLeft, Trophy } from 'lucide-react'
+import { ChevronLeft, Heart, Trophy } from 'lucide-react'
 import Image from 'next/image'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { useToast } from '@/hooks/use-toast'
@@ -20,6 +20,7 @@ export default function MatchDetailPage() {
   const { settings, updateSetting } = useAppSettings()
   const { toast } = useToast()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
+  const inWatchlist = match ? settings.watchlistMatches.includes(match.id) : false
 
   if (!match) {
     return (
@@ -76,6 +77,19 @@ export default function MatchDetailPage() {
                   className="px-4 py-2 rounded-xl bg-[#f4a30a] text-black text-sm font-semibold"
                 >
                   {t('simulateScoreUpdate')}
+                </button>
+                <button
+                  onClick={() => {
+                    const next = inWatchlist
+                      ? settings.watchlistMatches.filter((id) => id !== match.id)
+                      : [...settings.watchlistMatches, match.id]
+                    updateSetting('watchlistMatches', next)
+                    toast({ title: inWatchlist ? 'Removed from watchlist' : 'Added to watchlist', description: `${match.team1.name} vs ${match.team2.name}` })
+                  }}
+                  className="px-4 py-2 rounded-xl border border-white/15 text-white text-sm font-semibold inline-flex items-center gap-2 hover:bg-white/5"
+                >
+                  <Heart size={14} fill={inWatchlist ? '#f4a30a' : 'transparent'} className={inWatchlist ? 'text-[#f4a30a]' : ''} />
+                  Watchlist
                 </button>
                 <button
                   onClick={() => {

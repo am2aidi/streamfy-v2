@@ -141,16 +141,16 @@ export function HomeMusicSection() {
       {featured ? (
         <article className="streamfy-fade-slide rounded-2xl border border-white/10 bg-white/[0.04] p-4">
           <div className="flex items-center gap-4">
-            <div className="relative h-20 w-20 overflow-hidden rounded-xl">
+            <Link href={`/music/${featured.id}`} className="relative h-20 w-20 overflow-hidden rounded-xl">
               <Image src={featured.image} alt={featured.title} fill className="object-cover" loading="lazy" />
-            </div>
-            <div className="flex-1 min-w-0">
+            </Link>
+            <Link href={`/music/${featured.id}`} className="flex-1 min-w-0">
               <p className="text-xs uppercase text-gray-500">{t('featuredAlbum')}</p>
               <p className="text-white text-sm font-semibold streamfy-soft-float truncate">{featured.title}</p>
               <p className="text-gray-400 text-xs truncate">
                 {featured.artist} | {featured.year}
               </p>
-            </div>
+            </Link>
             <button
               onClick={() => playSnippet(featured.url, featured.id)}
               className="inline-flex items-center gap-2 rounded-lg bg-[#f4a30a] px-3 py-2 text-xs font-semibold text-black"
@@ -164,41 +164,58 @@ export function HomeMusicSection() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filteredAlbums.slice(0, 12).map((album) => (
-          <article key={album.id} className="overflow-hidden rounded-xl border border-white/10 bg-white/5">
-            <div className="relative h-52">
-              <Image src={album.image} alt={album.title} fill className="object-cover transition-transform duration-500 hover:scale-[1.03] will-change-transform" loading="lazy" />
-            </div>
-            <div className="space-y-2 p-4">
-              <p className="text-white text-base font-semibold">{album.title}</p>
-              <p className="text-gray-400 text-xs">
-                {album.artist} | {album.year}
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => playSnippet(album.url, album.id)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white hover:bg-white/10"
-                >
-                  <Play size={12} />
-                  {previewingId === album.id ? 'Playing...' : 'Play'}
-                </button>
-                <button
-                  onClick={() => {
-                    const inLibrary = library.includes(album.id)
-                    const next = inLibrary ? library.filter((id) => id !== album.id) : [...library, album.id]
-                    setLibrary(next)
-                    toast({
-                      title: inLibrary ? t('removedFromLibrary') : t('addedToLibrary'),
-                      description: album.title,
-                    })
-                  }}
-                  className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/15"
-                >
-                  <Plus size={12} />
-                  {library.includes(album.id) ? t('inLibrary') : t('addToLibrary')}
-                </button>
+          <Link
+            key={album.id}
+            href={`/music/${album.id}`}
+            className="group overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-colors hover:bg-white/10"
+            aria-label={`${album.title} by ${album.artist}`}
+          >
+            <article>
+              <div className="relative h-52">
+                <Image
+                  src={album.image}
+                  alt={album.title}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03] will-change-transform"
+                  loading="lazy"
+                />
               </div>
-            </div>
-          </article>
+              <div className="space-y-2 p-4">
+                <p className="text-white text-base font-semibold">{album.title}</p>
+                <p className="text-gray-400 text-xs">
+                  {album.artist} | {album.year}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      playSnippet(album.url, album.id)
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white hover:bg-white/10"
+                  >
+                    <Play size={12} />
+                    {previewingId === album.id ? 'Playing...' : 'Play'}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      const inLibrary = library.includes(album.id)
+                      const next = inLibrary ? library.filter((id) => id !== album.id) : [...library, album.id]
+                      setLibrary(next)
+                      toast({
+                        title: inLibrary ? t('removedFromLibrary') : t('addedToLibrary'),
+                        description: album.title,
+                      })
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/15"
+                  >
+                    <Plus size={12} />
+                    {library.includes(album.id) ? t('inLibrary') : t('addToLibrary')}
+                  </button>
+                </div>
+              </div>
+            </article>
+          </Link>
         ))}
       </div>
     </section>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
@@ -13,6 +13,7 @@ import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/hooks/use-toast'
 import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
 import { getTranslation } from '@/lib/translations'
+import { getNewsByCategory } from '@/lib/news-data'
 
 type TabId = 'yesterday' | 'today' | 'upcoming'
 
@@ -26,6 +27,7 @@ export default function SportsPage() {
   const [scheduleDay, setScheduleDay] = useState<ScheduleDay>('Today')
   const [showAll, setShowAll] = useState(false)
   const [myLeagueOnly, setMyLeagueOnly] = useState(false)
+  const [view, setView] = useState<'all' | 'news' | 'shorts'>('all')
   const [sportFilter, setSportFilter] = useState<'all' | 'football' | 'basketball' | 'volleyball'>('all')
   const [leagueFilter, setLeagueFilter] = useState('all')
   const { settings, updateSetting } = useAppSettings()
@@ -73,26 +75,16 @@ export default function SportsPage() {
         ? 'Today'
         : `${scheduleDay} fixtures`
 
-  const sportsNews = [
-    {
-      title: 'Title race gets tighter after late winner',
-      league: 'Premier League',
-      time: '10m ago',
-      image: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=640&q=80',
-    },
-    {
-      title: 'Derby injury updates before kickoff',
-      league: 'Serie A',
-      time: '25m ago',
-      image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=640&q=80',
-    },
-    {
-      title: 'Coach reacts to dramatic overtime win',
-      league: 'NBA',
-      time: '50m ago',
-      image: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=640&q=80',
-    },
-  ]
+  const sportsNews = useMemo(
+    () =>
+      getNewsByCategory('sports').map((item) => ({
+        title: item.title,
+        league: item.source,
+        time: item.time,
+        image: item.image,
+      })),
+    []
+  )
 
   const openRestrictedMatch = (href: string) => {
     requireAuth(() => router.push(href), t('authSigninPrompt'))
@@ -121,7 +113,26 @@ export default function SportsPage() {
             </button>
           </div>
 
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'news', label: 'News' },
+              { id: 'shorts', label: 'Shorts' },
+            ].map((x) => (
+              <button
+                key={x.id}
+                onClick={() => setView(x.id as typeof view)}
+                className={`rounded-full border px-4 py-2 text-sm ${
+                  view === x.id ? 'border-[#f4a30a]/60 bg-[#f4a30a]/15 text-[#f4a30a]' : 'border-white/15 bg-white/5 text-gray-300'
+                }`}
+              >
+                {x.label}
+              </button>
+            ))}
+          </div>
+
           {/* Live Events Section */}
+          {view === 'all' ? (
           <section className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
               {[
@@ -236,9 +247,11 @@ export default function SportsPage() {
                 ))}
             </div>
           </section>
+          ) : null}
 
           {/* Sports Days + News + Shorts */}
           <section className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
+            {view !== 'shorts' ? (
             <article className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="inline-flex items-center gap-2 text-white text-lg font-bold">
@@ -279,7 +292,9 @@ export default function SportsPage() {
                 ))}
               </div>
             </article>
+            ) : null}
 
+            {view !== 'news' ? (
             <article className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="inline-flex items-center gap-2 text-white text-lg font-bold">
@@ -319,8 +334,11 @@ export default function SportsPage() {
                 ))}
               </div>
             </article>
+            ) : null}
           </section>
 
+          {view === 'all' ? (
+            <>
           {/* Schedule Tabs - Apple Sports Style */}
           <section className="flex flex-col gap-4">
             {/* Days */}
@@ -523,6 +541,8 @@ export default function SportsPage() {
               ))}
             </div>
           </section>
+            </>
+          ) : null}
         </main>
       </div>
     </div>

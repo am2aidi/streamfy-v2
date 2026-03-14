@@ -17,6 +17,7 @@ export function Header() {
   const { user, isAuthenticated, openSignIn, openSignUp, logout } = useAuth()
   const { toast } = useToast()
   const [showMenu, setShowMenu] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const languageName = useMemo(
     () => languages.find((l) => l.code === settings.language)?.name ?? 'English',
@@ -69,6 +70,13 @@ export function Header() {
           <input
             type="text"
             placeholder={t('searchPlaceholder')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return
+              const q = searchQuery.trim()
+              router.push(q ? `/search?q=${encodeURIComponent(q)}` : '/search')
+            }}
             className="w-[220px] rounded-full border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:border-[#f4a30a]/50 focus:outline-none"
           />
         </div>

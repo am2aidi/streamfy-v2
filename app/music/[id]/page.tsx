@@ -1,10 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
-import { ChevronLeft, Play } from 'lucide-react'
+import { ChevronLeft, Heart, Play } from 'lucide-react'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { getTrackById, musicTracks } from '@/lib/music-data'
@@ -18,8 +18,10 @@ export default function MusicDetailPage() {
   const params = useParams<{ id: string }>()
   const track = useMemo(() => getTrackById(params.id), [params.id])
   const { requireAuth } = useAuth()
-  const { settings } = useAppSettings()
+  const { settings, updateSetting } = useAppSettings()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
+  const inWatchlist = track ? settings.watchlistTracks.includes(track.id) : false
+  const [lyricsExpanded, setLyricsExpanded] = useState(false)
 
   if (!track) {
     return (
@@ -59,8 +61,39 @@ export default function MusicDetailPage() {
                 <Play size={16} fill="black" />
                 {t('playNow')}
               </button>
+              <button
+                onClick={() => {
+                  const next = inWatchlist
+                    ? settings.watchlistTracks.filter((id) => id !== track.id)
+                    : [...settings.watchlistTracks, track.id]
+                  updateSetting('watchlistTracks', next)
+                }}
+                className="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/[0.06] w-fit"
+              >
+                <Heart size={16} fill={inWatchlist ? '#f4a30a' : 'transparent'} className={inWatchlist ? 'text-[#f4a30a]' : ''} />
+                {inWatchlist ? 'Saved' : 'Watchlist'}
+              </button>
             </div>
           </div>
+
+          <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-white text-xl font-bold">Lyrics</h2>
+              <button
+                onClick={() => setLyricsExpanded((p) => !p)}
+                className="text-sm text-[#f4a30a] hover:underline"
+              >
+                {lyricsExpanded ? 'Show less' : 'Show more'}
+              </button>
+            </div>
+            <div
+              className={`mt-3 whitespace-pre-wrap text-sm text-gray-300 leading-relaxed ${
+                lyricsExpanded ? '' : 'max-h-40 overflow-hidden'
+              }`}
+            >
+              {track.lyrics ?? 'Lyrics are not available yet for this track.'}
+            </div>
+          </section>
 
           <section>
             <h2 className="text-white text-xl font-bold mb-3">{t('playlistTitle')}</h2>

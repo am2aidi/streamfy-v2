@@ -1,0 +1,11 @@
+
+> my-project@0.1.0 dev
+> node scripts/next-dev-direct.js
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://127.0.0.1:3001
+- Network:       http://127.0.0.1:3001
+
+✓ Starting...
+Creating turbopack project { dir: 'C:\\Users\\zaidi\\streamfy-new', testMode: true }
+✓ Ready in 712ms

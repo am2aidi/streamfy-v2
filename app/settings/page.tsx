@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react'
 import {
@@ -45,13 +45,23 @@ const tabs: Array<{ id: TabId; labelKey: TranslationKey; icon: ComponentType<{ s
   { id: 'subscription', labelKey: 'subscription', icon: CreditCard },
 ]
 
-const plans = [
-  { id: 'movie', label: 'Per Movie', price: 100, desc: 'Pay once and watch a single movie.', icon: Star, popular: false },
-  { id: 'day', label: 'Per Day', price: 200, desc: 'Unlimited access for 24 hours.', icon: Zap, popular: true },
-  { id: 'week', label: 'Per Week', price: 400, desc: 'Unlimited access for 7 days.', icon: CreditCard, popular: false },
-  { id: 'twoWeeks', label: '2 Weeks', price: 700, desc: 'Unlimited access for 14 days.', icon: CreditCard, popular: false },
-  { id: 'month', label: 'Per Month', price: 1000, desc: 'Unlimited access for 30 days.', icon: CreditCard, popular: false },
-] as const
+type SubscriptionPlanId = 'movie' | 'day' | 'week' | 'twoWeeks' | 'month'
+type SubscriptionPlanIcon = 'Star' | 'Zap' | 'CreditCard'
+
+type SubscriptionPlan = {
+  id: SubscriptionPlanId
+  label: string
+  priceRwf: number
+  desc: string
+  icon: SubscriptionPlanIcon
+  popular: boolean
+}
+
+const planIcons: Record<SubscriptionPlanIcon, ComponentType<{ size?: number; className?: string }>> = {
+  Star,
+  Zap,
+  CreditCard,
+}
 
 const paymentMethods = [
   { id: 'rw-mtn-airtel', title: 'MTN | Airtel Rwanda', desc: 'Koresha MTN cyangwa Airtel Mobile Money muri RWANDA', flag: '🇷🇼' },
@@ -66,14 +76,18 @@ const paymentMethods = [
 ] as const
 
 const inputClass =
-  'w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:border-[#f4a30a]/50 focus:outline-none transition-colors'
+  'w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:border-[color:var(--app-accent-a)]/50 focus:outline-none transition-colors'
 
 export default function SettingsPage() {
   const { settings, updateSetting } = useAppSettings()
   const t = (key: TranslationKey) => getTranslation(settings.language, key)
   const [activeTab, setActiveTab] = useState<TabId>('profile')
   const [showPayment, setShowPayment] = useState(false)
+  const [payPhone, setPayPhone] = useState('+250')
+  const [paymentId, setPaymentId] = useState<string | null>(null)
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'starting' | 'pending' | 'succeeded' | 'failed'>('idle')
   const [publicProfile, setPublicProfile] = useState(true)
+  const [remotePlans, setRemotePlans] = useState<SubscriptionPlan[] | null>(null)
   const [profileData, setProfileData] = useState({
     fullName: `${BRAND_NAME} User`,
     username: 'cineprouser',
@@ -92,7 +106,95 @@ export default function SettingsPage() {
     }
   }, [])
 
-  const selectedPlanData = plans.find((p) => p.id === settings.subscriptionPlan) ?? plans[0]
+  useEffect(() => {
+    // Prefill payment phone from profile if available.
+    const normalized = profileData.phone.replace(/\s+/g, '')
+    if (normalized.startsWith('+')) setPayPhone(normalized)
+  }, [profileData.phone])
+
+  const fallbackPlans: SubscriptionPlan[] = [
+    { id: 'movie', label: t('planMovieLabel'), priceRwf: 100, desc: t('planMovieDesc'), icon: 'Star', popular: false },
+    { id: 'day', label: t('planDayLabel'), priceRwf: 200, desc: t('planDayDesc'), icon: 'Zap', popular: true },
+    { id: 'week', label: t('planWeekLabel'), priceRwf: 400, desc: t('planWeekDesc'), icon: 'CreditCard', popular: false },
+    { id: 'twoWeeks', label: t('planTwoWeeksLabel'), priceRwf: 700, desc: t('planTwoWeeksDesc'), icon: 'CreditCard', popular: false },
+    { id: 'month', label: t('planMonthLabel'), priceRwf: 1000, desc: t('planMonthDesc'), icon: 'CreditCard', popular: false },
+  ]
+
+  useEffect(() => {
+    let cancelled = false
+    const controller = new AbortController()
+
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/subscription/plans?lang=${settings.language}`, { signal: controller.signal })
+        if (!res.ok) throw new Error('Failed to load plans')
+        const data = (await res.json()) as { plans: SubscriptionPlan[] }
+        if (!cancelled) setRemotePlans(data.plans)
+      } catch {
+        if (!cancelled) setRemotePlans(null)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
+  }, [settings.language])
+
+  const plans = remotePlans ?? fallbackPlans
+  const selectedPlanData = plans.find((p) => p.id === (settings.subscriptionPlan as SubscriptionPlanId)) ?? plans[0]
+
+  const initiateMoMoPayment = async () => {
+    setPaymentStatus('starting')
+    setPaymentId(null)
+    try {
+      const res = await fetch('/api/payments/momo/initiate', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          phone: payPhone,
+          amountRwf: selectedPlanData.priceRwf,
+          planId: selectedPlanData.id,
+        }),
+      })
+      if (!res.ok) throw new Error('initiate failed')
+      const data = (await res.json()) as { paymentId: string; status: string }
+      setPaymentId(data.paymentId)
+      setPaymentStatus('pending')
+    } catch {
+      setPaymentStatus('failed')
+    }
+  }
+
+  useEffect(() => {
+    if (!paymentId) return
+    if (paymentStatus !== 'pending') return
+
+    let cancelled = false
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/payments/momo/status/${paymentId}`)
+        if (!res.ok) return
+        const data = (await res.json()) as { payment: { status: string } }
+        if (cancelled) return
+        if (data.payment.status === 'succeeded') {
+          setPaymentStatus('succeeded')
+          setShowPayment(false)
+          return
+        }
+        if (data.payment.status === 'failed' || data.payment.status === 'cancelled') {
+          setPaymentStatus('failed')
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 1500)
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [paymentId, paymentStatus])
 
   return (
     <div className="flex min-h-screen bg-black">
@@ -308,17 +410,22 @@ export default function SettingsPage() {
 
           {activeTab === 'subscription' && (
             <section className="space-y-4">
-              <SettingsCard icon={Star} title="Current Plan" description="Your active subscription">
-                <div className="rounded-xl border border-[#f4a30a]/20 bg-[#f4a30a]/10 p-4">
-                  <p className="text-white">{selectedPlanData.label} - {selectedPlanData.price} RWF</p>
-                  <p className="text-xs text-emerald-400">Next billing date: March 18, 2026</p>
+              <SettingsCard icon={Star} title={t('subscriptionCurrentPlanTitle')} description={t('subscriptionCurrentPlanDesc')}>
+                <div className="rounded-xl border border-[color:var(--app-accent-a)]/20 bg-[color:var(--app-accent-a)]/10 p-4">
+                  <p className="text-white">
+                    {selectedPlanData.label} - {selectedPlanData.priceRwf} RWF
+                  </p>
+                  <p className="text-xs text-[color:var(--app-accent-a)]">
+                    {t('subscriptionNextBillingLabel')}: March 18, 2026
+                  </p>
                 </div>
               </SettingsCard>
 
-              <SettingsCard icon={CreditCard} title="Choose Subscription" description="Select a plan, then pick a payment method">
+              <SettingsCard icon={CreditCard} title={t('subscriptionChoosePlanTitle')} description={t('subscriptionChoosePlanDesc')}>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                   {plans.map((plan) => {
                     const active = settings.subscriptionPlan === plan.id
+                    const Icon = planIcons[plan.icon]
                     return (
                       <button
                         key={plan.id}
@@ -327,21 +434,23 @@ export default function SettingsPage() {
                           setShowPayment(true)
                         }}
                         className={`w-full rounded-2xl border p-4 text-left transition-colors ${
-                          active ? 'border-[#f4a30a]/45 bg-[#f4a30a]/10' : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06]'
+                          active
+                            ? 'border-[color:var(--app-accent-a)]/45 bg-[color:var(--app-accent-a)]/10'
+                            : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06]'
                         }`}
                       >
                         <div className="mb-3 flex items-center justify-between gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5">
-                            <plan.icon size={16} className="text-[#f4a30a]" />
+                            <Icon size={16} className="text-[color:var(--app-accent-a)]" />
                           </div>
                           {plan.popular ? (
-                            <span className="rounded-full border border-[#f4a30a]/35 bg-[#f4a30a]/10 px-2.5 py-1 text-[10px] font-semibold text-[#f4a30a]">
-                              Popular
+                            <span className="rounded-full border border-[color:var(--app-accent-a)]/35 bg-[color:var(--app-accent-a)]/10 px-2.5 py-1 text-[10px] font-semibold text-[color:var(--app-accent-a)]">
+                              {t('mostPopular')}
                             </span>
                           ) : null}
                         </div>
                         <p className="text-sm font-bold text-white">{plan.label}</p>
-                        <p className="mt-1 text-lg font-extrabold text-[#f4a30a]">{plan.price} RWF</p>
+                        <p className="mt-1 text-lg font-extrabold text-[color:var(--app-accent-a)]">{plan.priceRwf} RWF</p>
                         <p className="mt-1 text-xs text-gray-400">{plan.desc}</p>
                       </button>
                     )
@@ -350,18 +459,65 @@ export default function SettingsPage() {
               </SettingsCard>
 
               {showPayment && (
-                <SettingsCard icon={Phone} title="Payment Method" description="Choose payment method">
+                <SettingsCard icon={Phone} title={t('subscriptionPaymentTitle')} description={t('subscriptionPaymentDesc')}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-gray-400">
-                      Plan: <span className="text-white font-semibold">{selectedPlanData.label}</span> • Amount:{' '}
-                      <span className="text-white font-semibold">{selectedPlanData.price} RWF</span>
+                      {t('subscriptionPlanLabel')}: <span className="text-white font-semibold">{selectedPlanData.label}</span> - {t('subscriptionAmountLabel')}:&nbsp;
+                      <span className="text-white font-semibold">{selectedPlanData.priceRwf} RWF</span>
                     </p>
                     <button
                       onClick={() => setShowPayment(false)}
                       className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-gray-200 hover:bg-white/[0.06]"
                     >
-                      Close
+                      {t('close')}
                     </button>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <p className="text-sm font-semibold text-white">{t('payNowLabel')}</p>
+                    <p className="mt-1 text-xs text-gray-400">{t('momoPromptHint')}</p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                      <div>
+                        <label className="mb-2 block text-xs font-medium text-gray-400">{t('phoneNumberLabel')}</label>
+                        <input
+                          value={payPhone}
+                          onChange={(e) => setPayPhone(e.target.value)}
+                          placeholder="+2507xxxxxxxx"
+                          className={inputClass}
+                        />
+                        <p className="mt-1 text-[11px] text-gray-500">{t('phoneNumberHint')}</p>
+                      </div>
+                      <button
+                        onClick={initiateMoMoPayment}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[color:var(--app-accent-a)] px-5 text-sm font-semibold text-[color:var(--app-accent-fg)] hover:bg-[color:var(--app-accent-a)]/90"
+                      >
+                        {paymentStatus === 'starting' ? t('paymentStarting') : t('payNowLabel')}
+                      </button>
+                    </div>
+
+                    {paymentStatus === 'pending' ? (
+                      <p className="mt-3 text-sm text-[color:var(--app-accent-a)]">{t('paymentPending')}</p>
+                    ) : null}
+                    {paymentStatus === 'failed' ? (
+                      <p className="mt-3 text-sm text-red-400">{t('paymentFailed')}</p>
+                    ) : null}
+
+                    {paymentId && process.env.NODE_ENV !== 'production' ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          onClick={async () => {
+                            await fetch('/api/payments/momo/mock/approve', {
+                              method: 'POST',
+                              headers: { 'content-type': 'application/json' },
+                              body: JSON.stringify({ paymentId }),
+                            })
+                          }}
+                          className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-gray-200 hover:bg-white/[0.06]"
+                        >
+                          {t('simulateApproveLabel')}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -371,7 +527,7 @@ export default function SettingsPage() {
                         <div
                           key={method.id}
                           className={`rounded-2xl border p-4 shadow-[0_18px_50px_rgba(0,0,0,0.25)] ${
-                            active ? 'border-emerald-400/30 bg-emerald-500/10' : 'border-white/10 bg-black/30'
+                            active ? 'border-[color:var(--app-accent-a)]/30 bg-[color:var(--app-accent-a)]/10' : 'border-white/10 bg-black/30'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-3">
@@ -387,11 +543,13 @@ export default function SettingsPage() {
                           <button
                             onClick={() => updateSetting('paymentMethod', method.id)}
                             className={`mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
-                              active ? 'bg-emerald-400 text-black' : 'bg-emerald-500/90 text-black hover:bg-emerald-400'
+                              active
+                                ? 'bg-[color:var(--app-accent-a)] text-[color:var(--app-accent-fg)]'
+                                : 'bg-[color:var(--app-accent-a)]/90 text-[color:var(--app-accent-fg)] hover:bg-[color:var(--app-accent-a)]'
                             }`}
                           >
                             <Check size={16} />
-                            Komeza
+                            {t('continueLabel')}
                           </button>
                         </div>
                       )
@@ -515,3 +673,4 @@ function CopyLinkAction({ url, label }: { url: string; label: string }) {
     </button>
   )
 }
+

@@ -6,6 +6,7 @@ import { Lock, Mail } from 'lucide-react'
 import { AdminLogo } from '@/components/admin/AdminLogo'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation, type TranslationKey } from '@/lib/translations'
+import { BRAND_NAME } from '@/lib/brand'
 
 const ADMIN_SESSION_KEY = 'streamfy-admin-session'
 
@@ -34,7 +35,7 @@ export default function AdminLoginPage() {
           <div className="hidden flex-col justify-between bg-gradient-to-br from-[#f4a30a]/15 via-transparent to-[#e67e22]/15 p-8 lg:flex">
             <AdminLogo />
             <div>
-              <h2 className="text-3xl font-black">STREAMFY ADMIN</h2>
+              <h2 className="text-3xl font-black">{BRAND_NAME.toUpperCase()} ADMIN</h2>
               <p className="mt-3 max-w-sm text-sm text-slate-300">
                 Secure access for content operations, analytics, ad campaigns, and full platform management.
               </p>

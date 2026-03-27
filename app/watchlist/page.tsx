@@ -52,7 +52,7 @@ export default function WatchlistPage() {
   return (
     <div className="flex min-h-screen bg-black">
       <Sidebar />
-      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-8">
+      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24 md:pb-8">
         <Header />
 
         <main className="px-6 flex flex-col gap-6">

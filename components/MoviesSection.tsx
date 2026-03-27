@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronRight, Download, ListPlus, Play, Plus, Search, Star } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { movieCards } from '@/lib/movies-data'
@@ -17,6 +18,7 @@ const featuredMeta: Record<string, { season: string; episode: string; director: 
 
 export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof movieCards)[number]['type'] } = {}) {
   const { toast } = useToast()
+  const router = useRouter()
   const { requireAuth } = useAuth()
   const { settings, updateSetting } = useAppSettings()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
@@ -77,11 +79,7 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
           <button
             onClick={() =>
               requireAuth(
-                () =>
-                  toast({
-                    title: t('downloadStarted'),
-                    description: t('downloadPrototypeQueued'),
-                  }),
+                () => router.push('/downloader'),
                 t('authSigninPrompt')
               )
             }

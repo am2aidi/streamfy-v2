@@ -33,6 +33,7 @@ import { Sidebar } from '@/components/Sidebar'
 import { accentThemePresets, useAppSettings, type AccentTheme } from '@/components/AppSettingsProvider'
 import { getTranslation, languages, type TranslationKey } from '@/lib/translations'
 import { SocialShareLinks } from '@/components/SocialShareLinks'
+import { BRAND_NAME } from '@/lib/brand'
 
 type TabId = 'profile' | 'security' | 'preferences' | 'social' | 'subscription'
 
@@ -74,9 +75,9 @@ export default function SettingsPage() {
   const [showPayment, setShowPayment] = useState(false)
   const [publicProfile, setPublicProfile] = useState(true)
   const [profileData, setProfileData] = useState({
-    fullName: 'Streamfy User',
-    username: 'streamfyuser',
-    email: 'user@streamfy.com',
+    fullName: `${BRAND_NAME} User`,
+    username: 'cineprouser',
+    email: 'user@cinepro.com',
     phone: '+250 798 123 456',
     bio: 'A passionate streaming enthusiast',
   })
@@ -96,7 +97,7 @@ export default function SettingsPage() {
   return (
     <div className="flex min-h-screen bg-black">
       <Sidebar />
-      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-8">
+      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24 md:pb-8">
         <Header />
         <main className="mx-auto w-full max-w-[1280px] px-4 pb-10 sm:px-6">
           <section className="mb-6 rounded-2xl border border-[#f4a30a]/20 bg-gradient-to-r from-[#f4a30a]/10 to-transparent p-4 sm:p-6">
@@ -399,7 +400,7 @@ export default function SettingsPage() {
                 </SettingsCard>
               )}
 
-              <SettingsCard icon={Download} title="Mobile Application" description="Download Streamfy on your smartphone">
+              <SettingsCard icon={Download} title="Mobile Application" description={`Download ${BRAND_NAME} on your smartphone`}>
                 <div className="flex flex-col gap-3">
                   <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#f4a30a]/30 bg-[#f4a30a]/10 px-4 py-3 text-[#f4a30a]"><Download size={16} /> Download for iOS</button>
                   <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#f4a30a]/30 bg-[#f4a30a]/10 px-4 py-3 text-[#f4a30a]"><Download size={16} /> Download for Android</button>

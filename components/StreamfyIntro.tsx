@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
+import { StreamfyLogo } from '@/components/StreamfyLogo'
+import { BRAND_NAME } from '@/lib/brand'
 
 export function StreamfyIntro() {
   const [show, setShow] = useState(false)
@@ -29,8 +30,8 @@ export function StreamfyIntro() {
       <div className="streamfy-intro-light absolute inset-0" />
       <div className="streamfy-intro-threads absolute inset-0" />
       <div className="relative flex flex-col items-center gap-3">
-        <Image src="/streamfy-s-logo.svg" alt="Streamfy Logo" width={112} height={112} className="streamfy-intro-logo" priority />
-        <p className="text-sm font-semibold tracking-[0.28em] text-[#ffd089]">STREAMFY</p>
+        <StreamfyLogo size={112} className="streamfy-intro-logo" aria-hidden="true" />
+        <p className="text-sm font-semibold tracking-[0.28em] text-[color:var(--app-accent-a)]">{BRAND_NAME.toUpperCase()}</p>
       </div>
     </div>
   )

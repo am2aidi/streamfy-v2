@@ -9,6 +9,7 @@ import { getTranslation, type TranslationKey, languages } from '@/lib/translatio
 import { movieCards } from '@/lib/movies-data'
 import { musicTracks } from '@/lib/music-data'
 import { getAllMatches } from '@/lib/sports-data'
+import { BRAND_NAME } from '@/lib/brand'
 import { useToast } from '@/hooks/use-toast'
 
 const filterYears = ['all', '2026', '2025', '2024', 'other'] as const
@@ -141,7 +142,7 @@ export function HomePageClient() {
         <header className="sticky top-0 z-50 border-b border-white/10 bg-[#07090d]/90 py-4 backdrop-blur">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Streamfy</h1>
+              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{BRAND_NAME}</h1>
               <p className="text-sm text-cyan-300 transition-transform duration-300 will-change-transform">
                 {t('streamfyFor')} {animatedWords[wordIndex]}
               </p>

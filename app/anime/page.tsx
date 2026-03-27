@@ -6,16 +6,17 @@ import { Header } from '@/components/Header'
 import { MoviesSection } from '@/components/MoviesSection'
 import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
 import { NewsFeed } from '@/components/NewsFeed'
-import { getNewsByCategory } from '@/lib/news-data'
+import { useNewsItems } from '@/hooks/useNewsItems'
 
 export default function AnimePage() {
+  const { byCategory } = useNewsItems()
   const [tab, setTab] = useState<'anime' | 'manga' | 'news'>('anime')
-  const animeNews = useMemo(() => getNewsByCategory('movies'), [])
+  const animeNews = useMemo(() => byCategory('movies'), [byCategory])
 
   return (
     <div className="flex min-h-screen bg-black">
       <Sidebar />
-      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-8">
+      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24 md:pb-8">
         <Header />
         <main className="px-6">
           <div className="mb-5">

@@ -9,12 +9,13 @@ import { Header } from '@/components/Header'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { shortVideos, type ShortsCategory } from '@/lib/shorts-data'
 import { NewsFeed } from '@/components/NewsFeed'
-import { newsItems } from '@/lib/news-data'
+import { useNewsItems } from '@/hooks/useNewsItems'
 
 type Tab = 'all' | 'news' | ShortsCategory
 
 export default function ShortsPage() {
   const { settings, updateSetting } = useAppSettings()
+  const { items: allNews } = useNewsItems()
   const [tab, setTab] = useState<Tab>('all')
 
   const items = useMemo(() => {
@@ -23,12 +24,12 @@ export default function ShortsPage() {
     return shortVideos.filter((s) => s.category === tab)
   }, [tab])
 
-  const shortsNews = useMemo(() => newsItems.slice(0, 6), [])
+  const shortsNews = useMemo(() => allNews.slice(0, 6), [allNews])
 
   return (
     <div className="flex min-h-screen bg-black">
       <Sidebar />
-      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-8">
+      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24 md:pb-8">
         <Header />
 
         <main className="px-6 flex flex-col gap-6">

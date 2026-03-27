@@ -6,8 +6,11 @@ export interface ShortVideo {
   category: ShortsCategory
   durationSeconds: number
   image: string
+  videoUrl?: string
   caption: string
 }
+
+const demoVideo = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'
 
 export const shortVideos: ShortVideo[] = [
   {
@@ -16,6 +19,7 @@ export const shortVideos: ShortVideo[] = [
     category: 'movies',
     durationSeconds: 42,
     image: '/dark-pursuit.jpg',
+    videoUrl: demoVideo,
     caption: 'A fast teaser cut with the best moments.',
   },
   {
@@ -24,6 +28,7 @@ export const shortVideos: ShortVideo[] = [
     category: 'movies',
     durationSeconds: 35,
     image: '/now-in-theaters.jpg',
+    videoUrl: demoVideo,
     caption: 'A quick first look at the new release.',
   },
   {
@@ -32,6 +37,7 @@ export const shortVideos: ShortVideo[] = [
     category: 'music',
     durationSeconds: 28,
     image: '/music-featured.jpg',
+    videoUrl: demoVideo,
     caption: 'A short behind-the-scenes hook preview.',
   },
   {
@@ -40,6 +46,7 @@ export const shortVideos: ShortVideo[] = [
     category: 'music',
     durationSeconds: 24,
     image: '/trending-songs.jpg',
+    videoUrl: demoVideo,
     caption: 'A short lyrics highlight clip.',
   },
   {
@@ -48,7 +55,8 @@ export const shortVideos: ShortVideo[] = [
     category: 'sports',
     durationSeconds: 19,
     image: '/sports-hero.jpg',
-    caption: 'A quick highlight from today’s match.',
+    videoUrl: demoVideo,
+    caption: "A quick highlight from today’s match.",
   },
   {
     id: 'short-sports-2',
@@ -56,6 +64,7 @@ export const shortVideos: ShortVideo[] = [
     category: 'sports',
     durationSeconds: 33,
     image: '/nba-highlights.jpg',
+    videoUrl: demoVideo,
     caption: 'Fast recap of the best plays.',
   },
   {
@@ -64,6 +73,7 @@ export const shortVideos: ShortVideo[] = [
     category: 'comedy',
     durationSeconds: 22,
     image: '/top-rated.jpg',
+    videoUrl: demoVideo,
     caption: 'A short comedy moment clip.',
   },
   {
@@ -72,6 +82,7 @@ export const shortVideos: ShortVideo[] = [
     category: 'comedy',
     durationSeconds: 31,
     image: '/now-in-theaters.jpg',
+    videoUrl: demoVideo,
     caption: 'Quick crowd work highlight from a set.',
   },
 ]

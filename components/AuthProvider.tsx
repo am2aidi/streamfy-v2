@@ -4,12 +4,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import Image from 'next/image'
 import { Eye, EyeOff, Lock, Mail, UserPlus, X } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
+import { StreamfyLogo } from '@/components/StreamfyLogo'
+import { BRAND_NAME } from '@/lib/brand'
 import { getTranslation, type TranslationKey } from '@/lib/translations'
 
 type AuthMode = 'signin' | 'signup'
 
 interface AuthUser {
   id: string
+  name?: string
+  username?: string
   email?: string
   phone?: string
   provider?: 'email' | 'gmail' | 'facebook' | 'twitter' | 'pro'
@@ -34,10 +38,19 @@ const STORAGE_USERS_KEY = 'streamfy-users'
 const STORAGE_SESSION_KEY = 'streamfy-auth-session'
 const DEFAULT_DEMO_USER: StoredUser = {
   id: 'u-demo',
+  name: 'Joe Don',
   email: 'joe.don@example.com',
   password: 'streamfy123',
   provider: 'email',
 }
+
+const DEFAULT_DEMO_USERS: StoredUser[] = [
+  { ...DEFAULT_DEMO_USER, username: 'joe_don' },
+  { id: 'u-alina', name: 'Alina', username: 'alina', email: 'alina@example.com', password: 'streamfy123', provider: 'email' },
+  { id: 'u-musa', name: 'Musa', username: 'musa', email: 'musa@example.com', password: 'streamfy123', provider: 'email' },
+  { id: 'u-ken', name: 'Ken', username: 'ken', email: 'ken@example.com', password: 'streamfy123', provider: 'email' },
+  { id: 'u-support', name: `${BRAND_NAME} Support`, username: 'cinepro_support', email: 'support@cinepro.io', password: 'streamfy123', provider: 'email' },
+]
 
 const countryCodes = [
   { code: '+250', label: 'Rwanda', flag: '🇷🇼' },
@@ -93,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const rawUsers = localStorage.getItem(STORAGE_USERS_KEY)
       if (!rawUsers) {
-        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify([DEFAULT_DEMO_USER]))
+        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(DEFAULT_DEMO_USERS))
       }
       const rawSession = localStorage.getItem(STORAGE_SESSION_KEY)
       if (rawSession) {
@@ -118,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(next)
     localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(next))
     localStorage.setItem('streamfy-session', 'active')
+    window.dispatchEvent(new Event('streamfy:users-updated'))
     setOpen(false)
     const pending = pendingActionRef.current
     pendingActionRef.current = null
@@ -200,6 +214,8 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
   const [identifier, setIdentifier] = useState('joe.don@example.com')
   const [signInCountryCode, setSignInCountryCode] = useState('+250')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('joe.don@example.com')
   const [phone, setPhone] = useState('')
   const [countryCode, setCountryCode] = useState('+250')
@@ -215,6 +231,10 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
     setError('')
     setMessage('')
     setForgotOpen(false)
+    if (mode === 'signup') {
+      setUsername('')
+      setName('')
+    }
   }, [open, mode])
 
   if (!open) return null
@@ -230,6 +250,19 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
 
   const writeUsers = (users: StoredUser[]) => {
     localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users))
+    window.dispatchEvent(new Event('streamfy:users-updated'))
+  }
+
+  const normalizeUsername = (raw: string) => raw.trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20)
+
+  const ensureUniqueUsername = (candidate: string, users: StoredUser[]) => {
+    const base = normalizeUsername(candidate) || `user${Date.now().toString().slice(-5)}`
+    if (!users.some((u) => (u.username ?? '').toLowerCase() === base)) return base
+    for (let i = 1; i < 9999; i++) {
+      const next = `${base}${i}`.slice(0, 20)
+      if (!users.some((u) => (u.username ?? '').toLowerCase() === next)) return next
+    }
+    return `${base}${Math.random().toString(16).slice(2, 6)}`.slice(0, 20)
   }
 
   const handleSignIn = () => {
@@ -258,6 +291,8 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
     }
     onAuthSuccess({
       id: user.id,
+      name: user.name,
+      username: user.username,
       email: user.email,
       phone: user.phone,
       provider: user.provider ?? 'email',
@@ -288,8 +323,21 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
       setError(t('authUserExists'))
       return
     }
+    const normalized = normalizeUsername(username)
+    if (!normalized) {
+      setError('Choose a username.')
+      return
+    }
+    const usernameTaken = users.some((entry) => (entry.username ?? '').toLowerCase() === normalized)
+    if (usernameTaken) {
+      setError('That username is already taken.')
+      return
+    }
+
     const newUser: StoredUser = {
       id: `u-${Date.now()}`,
+      name: name.trim() || undefined,
+      username: normalized,
       email: trimmedEmail || undefined,
       phone: fullPhone,
       password: password.trim(),
@@ -298,6 +346,8 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
     writeUsers([...users, newUser])
     onAuthSuccess({
       id: newUser.id,
+      name: newUser.name,
+      username: newUser.username,
       email: newUser.email,
       phone: newUser.phone,
       provider: newUser.provider,
@@ -305,11 +355,14 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
   }
 
   const socialAuth = () => {
-    onAuthSuccess({
-      id: `u-gmail-${Date.now()}`,
-      email: 'joe.don@example.com',
-      provider: 'gmail',
-    })
+    const users = readUsers()
+    const id = `u-gmail-${Date.now()}`
+    const email = 'joe.don@example.com'
+    const base = email.split('@')[0] ?? 'user'
+    const nextUsername = ensureUniqueUsername(base, users)
+    const newUser: StoredUser = { id, email, name: 'Joe Don', username: nextUsername, password: 'oauth', provider: 'gmail' }
+    writeUsers([...users, newUser])
+    onAuthSuccess({ id, email, name: newUser.name, username: newUser.username, provider: 'gmail' })
   }
 
   const backdropRow1 = authBackdropPosters
@@ -357,18 +410,19 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
       </div>
 
       <div className="absolute inset-0 bg-black/60" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(244,163,10,0.22),transparent_60%)]" />
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 50% 20%, color-mix(in oklab, var(--app-accent-a) 28%, transparent), transparent 60%)',
+        }}
+      />
 
       <div className="relative flex min-h-[100dvh] items-center justify-center px-4 py-8">
         <div className="auth-liquid-panel w-full max-w-[430px] max-h-[95vh] overflow-y-auto rounded-2xl p-5 md:p-6">
             <div className="mx-auto mb-4 flex w-fit items-center gap-2">
-              <span
-                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/10 shadow-[0_14px_34px_rgba(0,0,0,0.35)]"
-                style={{ backgroundImage: 'linear-gradient(135deg, var(--app-accent-a), var(--app-accent-b))' }}
-              >
-                <Image src="/streamfy-s-logo.svg" alt="Streamfy Logo" width={36} height={36} className="streamfy-logo-cinematic transition-transform duration-300 hover:scale-105" />
-              </span>
-              <span className="text-lg font-bold text-white">Streamfy</span>
+              <StreamfyLogo size={46} className="streamfy-logo-cinematic transition-transform duration-300 hover:scale-105" aria-hidden="true" />
+              <span className="text-lg font-bold text-white">{BRAND_NAME}</span>
             </div>
 
             {mode === 'signup' ? (
@@ -450,6 +504,18 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
                 </>
               ) : (
                 <>
+                  <input
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Username (unique)"
+                    className="w-full rounded-xl border border-[#f4a30a] bg-black/30 px-4 py-2.5 text-base text-white outline-none"
+                  />
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t('name')}
+                    className="w-full rounded-xl border border-[#f4a30a] bg-black/30 px-4 py-2.5 text-base text-white outline-none"
+                  />
                   <input
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}

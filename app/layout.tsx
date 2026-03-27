@@ -4,20 +4,21 @@ import { AppSettingsProvider } from '@/components/AppSettingsProvider'
 import { AuthProvider } from '@/components/AuthProvider'
 import { Toaster } from '@/components/ui/toaster'
 import { StreamfyIntro } from '@/components/StreamfyIntro'
+import { BRAND_NAME } from '@/lib/brand'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Streamfy - Movies, Music & Sports',
-  description: 'Streamfy entertainment platform',
+  title: `${BRAND_NAME} - Movies, Music & Sports`,
+  description: `${BRAND_NAME} entertainment platform`,
   generator: 'v0.app',
   icons: {
     icon: [
-      { url: '/streamfy-s-logo.svg', media: '(prefers-color-scheme: light)', type: 'image/svg+xml' },
-      { url: '/streamfy-s-logo.svg', media: '(prefers-color-scheme: dark)', type: 'image/svg+xml' },
-      { url: '/streamfy-s-logo.svg', type: 'image/svg+xml' },
+      { url: '/streamfy-s-logo-light.svg', media: '(prefers-color-scheme: light)', type: 'image/svg+xml' },
+      { url: '/streamfy-s-logo-dark.svg', media: '(prefers-color-scheme: dark)', type: 'image/svg+xml' },
+      { url: '/streamfy-s-logo-light.svg', type: 'image/svg+xml' },
     ],
-    shortcut: '/streamfy-s-logo.svg',
-    apple: '/streamfy-s-logo.svg',
+    shortcut: '/streamfy-s-logo-light.svg',
+    apple: '/streamfy-s-logo-light.svg',
   },
 }
 

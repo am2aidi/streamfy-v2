@@ -13,7 +13,9 @@ import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/hooks/use-toast'
 import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
 import { getTranslation } from '@/lib/translations'
-import { getNewsByCategory } from '@/lib/news-data'
+import { useNewsItems } from '@/hooks/useNewsItems'
+import { shortVideos } from '@/lib/shorts-data'
+import { ShortPreviewCard } from '@/components/shorts/ShortPreviewCard'
 
 type TabId = 'yesterday' | 'today' | 'upcoming'
 
@@ -33,6 +35,7 @@ export default function SportsPage() {
   const { settings, updateSetting } = useAppSettings()
   const { toast } = useToast()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
+  const { byCategory } = useNewsItems()
 
   const quickDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -77,14 +80,16 @@ export default function SportsPage() {
 
   const sportsNews = useMemo(
     () =>
-      getNewsByCategory('sports').map((item) => ({
+      byCategory('sports').map((item) => ({
         title: item.title,
         league: item.source,
         time: item.time,
         image: item.image,
       })),
-    []
+    [byCategory]
   )
+
+  const sportsReels = useMemo(() => shortVideos.filter((s) => s.category === 'sports').slice(0, 4), [])
 
   const openRestrictedMatch = (href: string) => {
     requireAuth(() => router.push(href), t('authSigninPrompt'))
@@ -94,7 +99,7 @@ export default function SportsPage() {
     <div className="flex min-h-screen bg-black">
       <Sidebar />
 
-      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-8">
+      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24 md:pb-8">
         <Header />
 
         <main className="flex flex-col gap-6 px-6">
@@ -331,6 +336,12 @@ export default function SportsPage() {
                       </div>
                     </div>
                   </Link>
+                ))}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {sportsReels.map((s) => (
+                  <ShortPreviewCard key={s.id} short={s} />
                 ))}
               </div>
             </article>

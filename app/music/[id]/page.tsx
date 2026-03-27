@@ -35,7 +35,7 @@ export default function MusicDetailPage() {
     <div className="flex min-h-screen bg-black">
       <Sidebar />
 
-      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24">
+      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24">
         <Header />
         <main className="px-6 flex flex-col gap-6">
           <Link href="/music" className="inline-flex items-center gap-2 text-gray-300 hover:text-white text-sm">

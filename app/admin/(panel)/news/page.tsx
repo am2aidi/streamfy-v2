@@ -3,21 +3,15 @@
 import { useMemo, useState } from 'react'
 import { Plus, Save, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { newsItems, type NewsCategory } from '@/lib/news-data'
+import type { NewsCategory, NewsItem } from '@/lib/news-data'
+import { useNewsItems } from '@/hooks/useNewsItems'
+import { BRAND_NAME } from '@/lib/brand'
 
-type Row = {
-  id: string
-  title: string
-  category: NewsCategory
-  summary: string
-  source: string
-  time: string
-  image: string
-}
+type Row = NewsItem
 
 export default function AdminNewsPage() {
   const { toast } = useToast()
-  const [rows, setRows] = useState<Row[]>(newsItems)
+  const { items: rows, setItems: setRows } = useNewsItems()
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<'all' | NewsCategory>('all')
 
@@ -25,9 +19,12 @@ export default function AdminNewsPage() {
     title: '',
     category: 'music',
     summary: '',
-    source: 'Streamfy Desk',
+    content: '',
+    source: `${BRAND_NAME} Desk`,
     time: 'Just now',
     image: '',
+    url: '',
+    videoUrl: '',
   })
 
   const filtered = useMemo(() => {
@@ -40,7 +37,17 @@ export default function AdminNewsPage() {
   }, [rows, query, category])
 
   const startNew = () => {
-    setForm({ title: '', category: 'music', summary: '', source: 'Streamfy Desk', time: 'Just now', image: '' })
+    setForm({
+      title: '',
+      category: 'music',
+      summary: '',
+      content: '',
+      source: `${BRAND_NAME} Desk`,
+      time: 'Just now',
+      image: '',
+      url: '',
+      videoUrl: '',
+    })
   }
 
   const save = () => {
@@ -57,9 +64,12 @@ export default function AdminNewsPage() {
       title: form.title.trim(),
       category: form.category,
       summary: form.summary.trim(),
-      source: form.source.trim() || 'Streamfy Desk',
+      content: form.content?.trim() || undefined,
+      source: form.source.trim() || `${BRAND_NAME} Desk`,
       time: form.time.trim() || 'Just now',
       image: form.image.trim() || 'https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa?w=900&q=80',
+      url: form.url?.trim() || undefined,
+      videoUrl: form.videoUrl?.trim() || undefined,
     }
     setRows((prev) => {
       const idx = prev.findIndex((x) => x.id === nextRow.id)
@@ -183,6 +193,13 @@ export default function AdminNewsPage() {
               rows={4}
               className="w-full resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none"
             />
+            <textarea
+              value={form.content ?? ''}
+              onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
+              placeholder="Full story (optional)"
+              rows={6}
+              className="w-full resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none"
+            />
             <input
               value={form.source}
               onChange={(e) => setForm((p) => ({ ...p, source: e.target.value }))}
@@ -199,6 +216,18 @@ export default function AdminNewsPage() {
               value={form.image}
               onChange={(e) => setForm((p) => ({ ...p, image: e.target.value }))}
               placeholder="Image URL"
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none"
+            />
+            <input
+              value={form.videoUrl ?? ''}
+              onChange={(e) => setForm((p) => ({ ...p, videoUrl: e.target.value }))}
+              placeholder="Video URL (optional)"
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none"
+            />
+            <input
+              value={form.url ?? ''}
+              onChange={(e) => setForm((p) => ({ ...p, url: e.target.value }))}
+              placeholder="Source URL (optional)"
               className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none"
             />
             <button

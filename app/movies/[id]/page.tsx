@@ -13,6 +13,7 @@ import { useAuth } from '@/components/AuthProvider'
 import { SocialShareLinks } from '@/components/SocialShareLinks'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation, type Language } from '@/lib/translations'
+import { DownloadOptionsModal } from '@/components/download/DownloadOptionsModal'
 
 export default function MovieDetailPage() {
   const params = useParams<{ id: string }>()
@@ -41,7 +42,7 @@ export default function MovieDetailPage() {
     <div className="flex min-h-screen bg-black">
       <Sidebar />
 
-      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-8">
+      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24 md:pb-8">
         <Header />
 
         <main className="px-6 flex flex-col gap-6">
@@ -179,28 +180,24 @@ export default function MovieDetailPage() {
           )}
 
           {showDownload && (
-            <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-              <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-                <h2 className="text-white text-lg font-semibold">{t('downloadQuality')}</h2>
-                <div className="mt-4 flex flex-col gap-2">
-                  {['360p', '480p', '720p', '1080p'].map((q) => (
-                    <button
-                      key={q}
-                      onClick={() => {
-                        toast({ title: t('downloadQueued'), description: `${movie.title} (${q}) ${t('addedToDownloads')}` })
-                        setShowDownload(false)
-                      }}
-                      className="text-left px-3 py-2.5 rounded-lg border border-white/10 text-white hover:bg-white/5"
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-                <button onClick={() => setShowDownload(false)} className="mt-4 text-gray-300 text-sm hover:text-white">
-                  {t('cancel')}
-                </button>
-              </div>
-            </div>
+            <DownloadOptionsModal
+              open={showDownload}
+              onClose={() => setShowDownload(false)}
+              title={movie.title}
+              imageUrl={movie.image}
+              description={movie.description}
+              tags={[movie.genre, `${movie.year}`, movie.language.toUpperCase()]}
+              mediaType={movie.type === 'series' ? 'series' : movie.type === 'animation' ? 'anime' : 'movie'}
+              seasonCount={movie.type === 'series' ? 2 : 1}
+              episodesPerSeason={movie.type === 'series' ? 24 : 1}
+              onConfirm={(selection) => {
+                toast({
+                  title: t('downloadQueued'),
+                  description: `${movie.title} (${selection.quality}) ${t('addedToDownloads')}`,
+                })
+                setShowDownload(false)
+              }}
+            />
           )}
         </main>
       </div>

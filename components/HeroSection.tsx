@@ -5,11 +5,12 @@ import Link from 'next/link'
 import { Play, Film, Trophy, Music2 } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation } from '@/lib/translations'
+import { BRAND_NAME } from '@/lib/brand'
 
 const slides = [
   {
     image: '/now-in-theaters.jpg',
-    heading: 'WELCOME TO STREAMFY',
+    heading: `WELCOME TO ${BRAND_NAME.toUpperCase()}`,
     subheading: 'Unlimited Movies • Live Sports • Trending Music',
     description: 'Experience Entertainment Like Never Before',
   },

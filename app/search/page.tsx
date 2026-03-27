@@ -10,13 +10,17 @@ import { movieCards } from '@/lib/movies-data'
 import { musicTracks } from '@/lib/music-data'
 import { getAllMatches } from '@/lib/sports-data'
 import { shortVideos } from '@/lib/shorts-data'
-import { newsItems } from '@/lib/news-data'
+import { useNewsItems } from '@/hooks/useNewsItems'
+import { useCommunity } from '@/hooks/useCommunity'
+import { listPublicUsers } from '@/lib/users-store'
 
 export default function SearchPage() {
   const router = useRouter()
   const params = useSearchParams()
   const qParam = params.get('q') ?? ''
   const [q, setQ] = useState(qParam)
+  const { items: newsItems } = useNewsItems()
+  const { items: communityItems } = useCommunity()
 
   const query = qParam.trim().toLowerCase()
 
@@ -43,9 +47,24 @@ export default function SearchPage() {
   const news = useMemo(() => {
     if (!query) return []
     return newsItems.filter((n) => (n.title + ' ' + n.summary + ' ' + n.source).toLowerCase().includes(query)).slice(0, 20)
+  }, [newsItems, query])
+
+  const community = useMemo(() => {
+    if (!query) return []
+    return communityItems
+      .filter((i) => i.status === 'published')
+      .filter((i) => (i.title + ' ' + i.description + ' ' + i.kind).toLowerCase().includes(query))
+      .slice(0, 20)
+  }, [communityItems, query])
+
+  const people = useMemo(() => {
+    if (!query) return []
+    return listPublicUsers()
+      .filter((u) => (u.name + ' ' + (u.email ?? '') + ' ' + (u.phone ?? '')).toLowerCase().includes(query))
+      .slice(0, 20)
   }, [query])
 
-  const hasResults = movies.length + tracks.length + matches.length + shorts.length + news.length > 0
+  const hasResults = movies.length + tracks.length + matches.length + shorts.length + news.length + community.length + people.length > 0
 
   const submit = () => {
     const next = q.trim()
@@ -55,13 +74,13 @@ export default function SearchPage() {
   return (
     <div className="flex min-h-screen bg-black">
       <Sidebar />
-      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-8">
+      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24 md:pb-8">
         <Header />
 
         <main className="px-6 flex flex-col gap-6">
           <div>
             <h1 className="text-white text-3xl font-bold">Search</h1>
-            <p className="text-gray-400 text-sm mt-1">Movies, music, sports, shorts, and news.</p>
+            <p className="text-gray-400 text-sm mt-1">Movies, music, sports, shorts, community, and people.</p>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -85,9 +104,7 @@ export default function SearchPage() {
           </div>
 
           {!query ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-gray-300">
-              Type something to search.
-            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-gray-300">Type something to search.</div>
           ) : !hasResults ? (
             <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-gray-300">
               No results for <span className="text-white font-semibold">{qParam}</span>.
@@ -134,6 +151,22 @@ export default function SearchPage() {
                       <p className="text-gray-400 text-xs mt-1">{n.source} • {n.time}</p>
                       <p className="text-gray-300 text-sm mt-2 line-clamp-2">{n.summary}</p>
                     </div>
+                  ))}
+                </ResultSection>
+              ) : null}
+
+              {community.length ? (
+                <ResultSection title="Community">
+                  {community.map((i) => (
+                    <ResultItem key={i.id} href="/community" title={i.title} meta={`${i.kind.toUpperCase()} • Community pick`} />
+                  ))}
+                </ResultSection>
+              ) : null}
+
+              {people.length ? (
+                <ResultSection title="People">
+                  {people.map((p) => (
+                    <ResultItem key={p.id} href={`/chat?u=${encodeURIComponent(p.id)}`} title={p.name} meta={p.email || p.phone || p.id} />
                   ))}
                 </ResultSection>
               ) : null}

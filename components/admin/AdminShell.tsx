@@ -6,16 +6,19 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   BarChart3,
   Bell,
+  ChevronDown,
+  Bot,
   Clapperboard,
   Newspaper,
   LogOut,
   Megaphone,
+  MessageSquare,
   Music2,
   Plus,
   PlaySquare,
-  Search,
   Settings,
   ShieldCheck,
+  UploadCloud,
   Tv,
   Users,
 } from 'lucide-react'
@@ -36,6 +39,9 @@ const pageAccentByHref: Record<string, { a: string; b: string }> = {
   '/admin/news': { a: '#38bdf8', b: '#6366f1' },
   '/admin/shorts': { a: '#f4a30a', b: '#e67e22' },
   '/admin/ads': { a: '#ef4444', b: '#f59e0b' },
+  '/admin/community': { a: '#22d3ee', b: '#3b82f6' },
+  '/admin/feedback': { a: '#f4a30a', b: '#e67e22' },
+  '/admin/chatbot': { a: '#a855f7', b: '#22d3ee' },
   '/admin/users': { a: '#38bdf8', b: '#818cf8' },
   '/admin/analytics': { a: '#8b5cf6', b: '#ec4899' },
   '/admin/settings': { a: '#14b8a6', b: '#a855f7' },
@@ -58,6 +64,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
       { href: '/admin/news', labelKey: 'newsManagement', icon: Newspaper },
       { href: '/admin/shorts', labelKey: 'shortsManagement', icon: PlaySquare },
       { href: '/admin/ads', labelKey: 'adsManagement', icon: Megaphone },
+      { href: '/admin/community', labelKey: 'communityManagement', icon: UploadCloud },
+      { href: '/admin/feedback', labelKey: 'feedbackManagement', icon: MessageSquare },
+      { href: '/admin/chatbot', labelKey: 'chatbotManagement', icon: Bot },
       { href: '/admin/users', labelKey: 'usersManagement', icon: Users },
       { href: '/admin/analytics', labelKey: 'analytics', icon: BarChart3 },
       { href: '/admin/settings', labelKey: 'settings', icon: Settings },
@@ -164,6 +173,23 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
+              <div className="relative lg:hidden">
+                <select
+                  value={navItems.find((item) => (item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href)))?.href ?? '/admin'}
+                  onChange={(e) => router.push(e.target.value)}
+                  className="appearance-none rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 pr-9 text-sm text-slate-200"
+                  aria-label="Admin navigation"
+                  title="Admin navigation"
+                >
+                  {navItems.map((item) => (
+                    <option key={item.href} value={item.href}>
+                      {t(item.labelKey)}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              </div>
+
               <select
                 value={settings.language}
                 onChange={(e) => updateSetting('language', e.target.value as typeof settings.language)}
@@ -178,13 +204,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 ))}
               </select>
 
-              <div className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 sm:flex">
-                <Search size={15} className="text-slate-400" />
-                <input
-                  placeholder={t('adminSearchPlaceholder')}
-                  className="w-56 bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none"
-                />
-              </div>
+              {/* Search lives on /search */}
 
               <button
                 onClick={() => toast({ title: t('notifications'), description: t('notificationsPrototypeDesc') })}

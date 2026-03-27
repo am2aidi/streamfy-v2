@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import Image from 'next/image'
-import { ArrowUpCircle, Bell, CircleHelp, Download, Gift, Globe, Info, LogOut, Moon, Search, Settings, Sun, UserCircle2 } from 'lucide-react'
+import { ArrowUpCircle, Bell, CircleHelp, Download, Gift, Globe, Info, LogOut, Moon, Settings, Sun, UserCircle2 } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { getTranslation, languages } from '@/lib/translations'
 import { useToast } from '@/hooks/use-toast'
 import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
+import { StreamfyLogo } from '@/components/StreamfyLogo'
 
 export function Header() {
   const router = useRouter()
@@ -17,7 +17,6 @@ export function Header() {
   const { user, isAuthenticated, openSignIn, openSignUp, logout } = useAuth()
   const { toast } = useToast()
   const [showMenu, setShowMenu] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const languageName = useMemo(
     () => languages.find((l) => l.code === settings.language)?.name ?? 'English',
@@ -30,15 +29,7 @@ export function Header() {
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
-            <span
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.25)]"
-              style={{
-                backgroundImage: 'linear-gradient(135deg, var(--app-accent-a), var(--app-accent-b))',
-              }}
-              aria-hidden="true"
-            >
-              <Image src="/streamfy-s-logo.svg" alt="Streamfy Logo" width={30} height={30} className="streamfy-logo-cinematic" />
-            </span>
+            <StreamfyLogo size={40} className="streamfy-logo-cinematic shrink-0" aria-hidden="true" />
             <span className="text-sm text-gray-400">{t('welcome')}</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">{t('discoverEnjoy')}</h1>
@@ -65,21 +56,7 @@ export function Header() {
           {settings.theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
 
-        <div className="relative hidden md:block">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder={t('searchPlaceholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== 'Enter') return
-              const q = searchQuery.trim()
-              router.push(q ? `/search?q=${encodeURIComponent(q)}` : '/search')
-            }}
-            className="w-[220px] rounded-full border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:border-[#f4a30a]/50 focus:outline-none"
-          />
-        </div>
+        {/* Search lives on /search (sidebar) */}
 
         <button
           onClick={() =>
@@ -111,7 +88,9 @@ export function Header() {
           {showMenu && (
             <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-white/10 bg-black/95 p-2">
               <div className="border-b border-white/10 px-3 py-2">
-                <p className="text-sm font-semibold text-white">{isAuthenticated ? user?.email ?? user?.phone ?? 'User' : t('guestMode')}</p>
+                <p className="text-sm font-semibold text-white">
+                  {isAuthenticated ? user?.name ?? (user?.username ? `@${user.username}` : null) ?? user?.email ?? user?.phone ?? 'User' : t('guestMode')}
+                </p>
                 <p className="text-xs text-gray-400">{languageName}</p>
               </div>
               {!isAuthenticated ? (

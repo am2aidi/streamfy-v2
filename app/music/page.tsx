@@ -13,15 +13,17 @@ import { useMemo, useState } from 'react'
 import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
 import { getTranslation } from '@/lib/translations'
 import { NewsFeed } from '@/components/NewsFeed'
-import { getNewsByCategory } from '@/lib/news-data'
+import { useNewsItems } from '@/hooks/useNewsItems'
 import { shortVideos } from '@/lib/shorts-data'
+import { ShortPreviewCard } from '@/components/shorts/ShortPreviewCard'
 
 export default function MusicPage() {
   const { settings, updateSetting } = useAppSettings()
+  const { byCategory } = useNewsItems()
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [view, setView] = useState<'all' | 'news' | 'reels'>('all')
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
-  const musicNews = useMemo(() => getNewsByCategory('music'), [])
+  const musicNews = byCategory('music')
   const musicReels = useMemo(() => shortVideos.filter((s) => s.category === 'music').slice(0, 8), [])
 
   const filteredTracks = settings.favoriteTracks && favoritesOnly
@@ -32,7 +34,7 @@ export default function MusicPage() {
     <div className="flex min-h-screen bg-black">
       <Sidebar />
 
-      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24">
+      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24">
         <Header />
 
         <main className="flex flex-col gap-8 px-6">
@@ -79,20 +81,7 @@ export default function MusicPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {musicReels.map((s) => (
-                  <Link
-                    key={s.id}
-                    href={`/shorts/${s.id}`}
-                    className="group overflow-hidden rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
-                  >
-                    <div className="relative h-48">
-                      <Image src={s.image} alt={s.title} fill className="object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
-                      <div className="absolute bottom-3 left-3 right-3">
-                        <p className="text-white text-sm font-semibold line-clamp-2">{s.title}</p>
-                        <p className="text-gray-300 text-xs mt-1 line-clamp-1">0:{s.durationSeconds.toString().padStart(2, '0')}s</p>
-                      </div>
-                    </div>
-                  </Link>
+                  <ShortPreviewCard key={s.id} short={s} />
                 ))}
               </div>
             </section>

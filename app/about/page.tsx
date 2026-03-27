@@ -29,14 +29,14 @@ export default function AboutPage() {
       subtitle: 'Your Ultimate Entertainment Streaming Platform',
       missionTitle: 'Our Mission',
       missionBody:
-        'Streamfy is dedicated to bringing the world of entertainment directly to your fingertips. We believe everyone deserves access to premium content — music, sports, and movies — all in one seamless, user-friendly platform. Our mission is to revolutionize how people discover and enjoy entertainment content.',
+        'CinePro is dedicated to bringing the world of entertainment directly to your fingertips. We believe everyone deserves access to premium content — music, sports, and movies — all in one seamless, user-friendly platform. Our mission is to revolutionize how people discover and enjoy entertainment content.',
       offerTitle: 'What We Offer',
       offers: [
         { title: 'Music Streaming', desc: 'Access millions of songs, curated playlists, and discover new artists' },
         { title: 'Live Sports', desc: 'Watch live matches, highlights, and exclusive sports content' },
         { title: 'Movies & Shows', desc: 'Stream blockbusters, series, and exclusive original content' },
       ],
-      whyTitle: 'Why Choose Streamfy?',
+      whyTitle: 'Why Choose CinePro?',
       features: [
         { title: 'HD Quality', desc: 'Enjoy crystal-clear video and audio' },
         { title: 'Multi-device', desc: 'Watch on any device, anytime, anywhere' },
@@ -51,7 +51,7 @@ export default function AboutPage() {
       ],
       teamTitle: 'Our Team',
       teamBody1:
-        'Founded in 2023, Streamfy was created by a passionate team of entertainment and technology enthusiasts dedicated to transforming the streaming industry.',
+        'Founded in 2023, CinePro was created by a passionate team of entertainment and technology enthusiasts dedicated to transforming the streaming industry.',
       teamBody2:
         'Our team continues to grow and innovate, working tirelessly to add new features, expand our content library, and deliver the best experience possible.',
       touchTitle: 'Get In Touch',
@@ -61,14 +61,14 @@ export default function AboutPage() {
       subtitle: 'Votre plateforme de streaming tout-en-un',
       missionTitle: 'Notre mission',
       missionBody:
-        "Streamfy a pour mission d'apporter le divertissement au bout de vos doigts. Films, sport en direct et musique tendance — tout dans une seule plateforme simple et moderne.",
+        "CinePro a pour mission d'apporter le divertissement au bout de vos doigts. Films, sport en direct et musique tendance — tout dans une seule plateforme simple et moderne.",
       offerTitle: 'Ce que nous proposons',
       offers: [
         { title: 'Streaming musical', desc: 'Des chansons, des playlists et la decouverte de nouveaux artistes' },
         { title: 'Sport en direct', desc: 'Matchs en direct, moments forts et contenus exclusifs' },
         { title: 'Films & series', desc: 'Blockbusters, series et contenus originaux' },
       ],
-      whyTitle: 'Pourquoi Streamfy ?',
+      whyTitle: 'Pourquoi CinePro ?',
       features: [
         { title: 'Qualite HD', desc: 'Une image et un son limpides' },
         { title: 'Multi-appareils', desc: 'Regardez partout, a tout moment' },
@@ -83,7 +83,7 @@ export default function AboutPage() {
       ],
       teamTitle: 'Notre equipe',
       teamBody1:
-        "Fonde en 2023, Streamfy est porte par une equipe passionnee de technologie et de divertissement, avec l'objectif de moderniser le streaming.",
+        "Fonde en 2023, CinePro est porte par une equipe passionnee de technologie et de divertissement, avec l'objectif de moderniser le streaming.",
       teamBody2:
         "Nous continuons d'innover pour ajouter des fonctionnalites, enrichir le catalogue et ameliorer l'experience utilisateur.",
       touchTitle: 'Contactez-nous',
@@ -93,14 +93,14 @@ export default function AboutPage() {
       subtitle: 'Urubuga rwawe rwo kureba no kumva ibikurangaza',
       missionTitle: 'Intego yacu',
       missionBody:
-        'Streamfy igamije kwegereza abantu filime, siporo iri live n’umuziki—byose ku rubuga rumwe rworoshye kandi rugaragara neza.',
+        'CinePro igamije kwegereza abantu filime, siporo iri live n’umuziki—byose ku rubuga rumwe rworoshye kandi rugaragara neza.',
       offerTitle: 'Ibyo dutanga',
       offers: [
         { title: 'Umuziki', desc: 'Indirimbo nyinshi, playlist zateguwe, n’abahanzi bashya' },
         { title: 'Siporo iri live', desc: 'Reba imikino live, highlights n’ibindi byihariye' },
         { title: 'Filime & series', desc: 'Reba filime, series n’ibindi bikunzwe' },
       ],
-      whyTitle: 'Impamvu wahitamo Streamfy',
+      whyTitle: 'Impamvu wahitamo CinePro',
       features: [
         { title: 'Ubwiza bwa HD', desc: 'Video n’amajwi bisobanutse' },
         { title: 'Ku bikoresho byose', desc: 'Rebera aho uri hose, igihe icyo ari cyo cyose' },
@@ -115,7 +115,7 @@ export default function AboutPage() {
       ],
       teamTitle: 'Ikipe yacu',
       teamBody1:
-        'Yashinzwe mu 2023, Streamfy yubatse n’ikipe ikunda ikoranabuhanga n’imyidagaduro, ifite intego yo kuvugurura uburyo abantu bareba streaming.',
+        'Yashinzwe mu 2023, CinePro yubatse n’ikipe ikunda ikoranabuhanga n’imyidagaduro, ifite intego yo kuvugurura uburyo abantu bareba streaming.',
       teamBody2:
         'Dukomeza kunoza serivisi, kongera ibikubiyemo, no gutanga ubunararibonye bwiza ku bakoresha.',
       touchTitle: 'Twandikire',
@@ -129,7 +129,7 @@ export default function AboutPage() {
     <div className="flex min-h-screen bg-black">
       <Sidebar />
 
-      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-8">
+      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24 md:pb-8">
         <Header />
 
         <main className="mx-auto flex min-h-[calc(100vh-88px)] w-full max-w-[1500px] flex-col gap-10 px-6 pb-8">

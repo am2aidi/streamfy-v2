@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Facebook, Instagram, Music2, Share2, Youtube } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation } from '@/lib/translations'
+import { BRAND_NAME } from '@/lib/brand'
 
 const socialProfiles = {
   whatsapp: 'https://wa.me/250700000000',
@@ -25,7 +26,7 @@ export function SocialShareLinks({ targetUrl, title }: { targetUrl?: string; tit
 
   const url = targetUrl || currentUrl
   const encoded = useMemo(() => encodeURIComponent(url), [url])
-  const encodedMessage = useMemo(() => encodeURIComponent(`Check this on Streamfy: ${url}`), [url])
+  const encodedMessage = useMemo(() => encodeURIComponent(`Check this on ${BRAND_NAME}: ${url}`), [url])
 
   const items = [
     { name: 'WhatsApp', href: `https://wa.me/?text=${encodedMessage}`, bg: 'bg-emerald-500/20', color: 'text-emerald-400' },

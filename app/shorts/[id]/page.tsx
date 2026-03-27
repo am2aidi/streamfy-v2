@@ -26,7 +26,7 @@ export default function ShortDetailPage() {
   return (
     <div className="flex min-h-screen bg-black">
       <Sidebar />
-      <div className="ml-[92px] w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-8">
+      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24 md:pb-8">
         <Header />
 
         <main className="px-6 flex flex-col gap-6">
@@ -97,11 +97,21 @@ export default function ShortDetailPage() {
           {showPlayer ? (
             <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
               <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-[#0f0f0f] p-4">
-                <div className="aspect-video rounded-xl bg-black/80 border border-white/10 flex flex-col items-center justify-center gap-2">
-                  <Play size={28} className="text-[#f4a30a]" />
-                  <p className="text-white text-sm">Playing short (prototype)</p>
-                  <p className="text-gray-400 text-xs">Wire this to your real reels player when ready.</p>
-                </div>
+                {short.videoUrl ? (
+                  <video
+                    controls
+                    playsInline
+                    autoPlay
+                    src={short.videoUrl}
+                    className="aspect-video w-full rounded-xl border border-white/10 bg-black/80 object-cover"
+                  />
+                ) : (
+                  <div className="aspect-video rounded-xl bg-black/80 border border-white/10 flex flex-col items-center justify-center gap-2">
+                    <Play size={28} className="text-[#f4a30a]" />
+                    <p className="text-white text-sm">Playing short (prototype)</p>
+                    <p className="text-gray-400 text-xs">Wire this to your real reels player when ready.</p>
+                  </div>
+                )}
                 <div className="mt-4 flex justify-end">
                   <button onClick={() => setShowPlayer(false)} className="text-gray-300 text-sm hover:text-white">
                     Close

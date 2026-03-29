@@ -14,7 +14,7 @@ export interface MusicTrack {
 }
 
 // Helper utilities to generate sample tracks
-const sampleImages = ['/trending-songs.jpg', '/new-releases.jpg', '/pop-hits.jpg', '/music-featured.jpg', '/cover1.jpg', '/cover2.jpg']
+const sampleImages = ['/trending-songs.svg', '/new-releases.svg', '/pop-hits.svg', '/music-featured.svg', '/cover1.svg', '/cover2.svg']
 const sampleArtists = ['Nova Bloom', 'JVKE', 'Lewis Capaldi', 'The Weeknd', 'Aria Lane', 'Midnight City', 'Echoes', 'Solaris', 'Neon Drift', 'Paper Boats']
 const sampleTitles = [
   'Night Drive', 'Golden Hour', 'Before You Go', 'Blinding Lights', 'Lost In Time', 'City Lights', 'Fading Echoes', 'Sunset Glow', 'Paper Trails', 'Midnight Run',

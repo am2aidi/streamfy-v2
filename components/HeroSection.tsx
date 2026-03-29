@@ -21,7 +21,7 @@ const slides = [
     description: 'Sports that feel like stadium seats at home',
   },
   {
-    image: '/music-featured.jpg',
+    image: '/music-featured.svg',
     heading: 'MUSIC THAT MOVES YOU',
     subheading: 'Top charts, fresh releases, and your favorites',
     description: 'Build playlists and keep the vibe going',

@@ -511,7 +511,7 @@ export default function SportsPage() {
                       <div className="relative w-8 h-8 rounded-full flex-shrink-0 border border-white/10 overflow-hidden bg-white/5">
                         <SportsImage
                           src={match.team2.logo}
-                          fallbackSrc="/placeholder-logo.png"
+                          fallbackSrc="/placeholder-logo.svg"
                           alt={match.team2.name}
                           fill
                           className="object-contain p-1"

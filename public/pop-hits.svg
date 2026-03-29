@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3498db"/><stop offset="100%" stop-color="#2980b9"/></linearGradient></defs>
+  <rect width="800" height="600" fill="#1a1a1a"/>
+  <rect width="800" height="600" fill="url(#g)" opacity="0.4"/>
+  <text x="400" y="280" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" font-weight="bold" fill="white">🎤 Pop Hits</text>
+  <text x="400" y="330" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#ccc">Best pop tracks</text>
+</svg>

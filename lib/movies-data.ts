@@ -55,7 +55,7 @@ export const movieCards: MovieItem[] = [
   {
     id: 'city-shadow',
     title: 'City Shadow',
-    image: '/top-rated.jpg',
+    image: '/top-rated.svg',
     description: 'A crime reporter tracks a string of disappearances in a sleepless city.',
     duration: '2h 01m',
     year: 2025,

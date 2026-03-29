@@ -32,7 +32,7 @@ export function HomeMusicSection() {
         id: track.id,
         title: track.album ?? track.title,
         artist: track.artist,
-        image: track.image.includes('cover') ? '/music-featured.jpg' : track.image,
+        image: track.image.includes('cover') ? '/music-featured.svg' : track.image,
         genre: track.genre,
         year: track.releaseDate ? String(new Date(track.releaseDate).getFullYear()) : '2026',
         url: track.url,

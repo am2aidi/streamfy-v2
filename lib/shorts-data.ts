@@ -81,7 +81,7 @@ export const shortVideos: ShortVideo[] = [
     title: 'Comedy: crowd work highlight',
     category: 'comedy',
     durationSeconds: 31,
-    image: '/now-in-theaters.jpg',
+    image: '/now-in-theaters.svg',
     videoUrl: demoVideo,
     caption: 'Quick crowd work highlight from a set.',
   },

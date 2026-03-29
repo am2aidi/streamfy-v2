@@ -93,7 +93,7 @@ export function SportsPreviewSection() {
           >
             <div className="flex items-center gap-3">
               <div className="relative h-16 w-24 overflow-hidden rounded-lg">
-                <Image src={match.heroImage ?? '/sports-hero.jpg'} alt={match.league} fill className="object-cover" loading="lazy" />
+                <Image src={match.heroImage ?? '/sports-hero.svg'} alt={match.league} fill className="object-cover" loading="lazy" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-white text-sm font-semibold truncate">{match.team1.name} vs {match.team2.name}</p>

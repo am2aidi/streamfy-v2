@@ -378,7 +378,7 @@ export const sportsData = {
         record: '7-3',
         initial: 'ITA',
         color: '#16A34A',
-        logo: '/placeholder-logo.png',
+        logo: '/placeholder-logo.svg',
       },
       team2: {
         name: 'Japan',

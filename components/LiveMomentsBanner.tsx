@@ -23,10 +23,10 @@ const sectionTheme: Record<BannerSection, string> = {
 }
 
 const mediaBySection: Record<BannerSection, string[]> = {
-  movies: ['/dark-pursuit.jpg', '/now-in-theaters.jpg', '/top-rated.jpg'],
-  music: ['/music-featured.jpg', '/trending-songs.jpg', '/new-releases.jpg', '/pop-hits.jpg'],
-  sports: ['/sports-hero.jpg', '/champions-league.jpg', '/nba-highlights.jpg', '/nfl-future.jpg'],
-  compact: ['/dark-pursuit.jpg', '/music-featured.jpg', '/sports-hero.jpg'],
+  movies: ['/dark-pursuit.svg', '/now-in-theaters.svg', '/top-rated.svg'],
+  music: ['/music-featured.svg', '/trending-songs.svg', '/new-releases.svg', '/pop-hits.svg'],
+  sports: ['/sports-hero.svg', '/champions-league.svg', '/nba-highlights.svg', '/nfl-future.svg'],
+  compact: ['/dark-pursuit.svg', '/music-featured.svg', '/sports-hero.svg'],
 }
 
 export function LiveMomentsBanner({ section }: LiveMomentsBannerProps) {

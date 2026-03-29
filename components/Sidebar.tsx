@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Info, Music, Share2, Tv2, Upload } from 'lucide-react'
+import { Home, Info, Music, Share2, Trophy, Tv2, Upload } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { StreamfyLogo } from '@/components/StreamfyLogo'
 import { BRAND_NAME } from '@/lib/brand'
@@ -49,6 +49,7 @@ export function Sidebar() {
             <NavItemLink href="/" label={t('home')} icon={Home} active={isActive('/')} />
             <div className="my-1 h-px w-8 bg-white/10" />
             <NavItemLink href="/movies" label={t('movies')} icon={Tv2} active={isActive('/movies')} />
+            <NavItemLink href="/sports" label={t('sports')} icon={Trophy} active={isActive('/sports')} />
             <NavItemLink href="/music" label={t('music')} icon={Music} active={isActive('/music')} />
             <div className="my-1 h-px w-8 bg-white/10" />
             <NavItemLink href="/upload" label="Upload" icon={Upload} active={isActive('/upload')} />
@@ -82,9 +83,10 @@ export function Sidebar() {
 
     {/* Mobile bottom navigation */}
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black/85 backdrop-blur-xl md:hidden">
-      <div className="mx-auto grid max-w-[900px] grid-cols-5 px-2 py-2">
+      <div className="mx-auto grid max-w-[900px] grid-cols-6 px-2 py-2">
         <MobileNavItem href="/" label={t('home')} icon={Home} active={isActive('/')} />
         <MobileNavItem href="/movies" label={t('movies')} icon={Tv2} active={isActive('/movies')} />
+        <MobileNavItem href="/sports" label={t('sports')} icon={Trophy} active={isActive('/sports')} />
         <MobileNavItem href="/music" label={t('music')} icon={Music} active={isActive('/music')} />
         <MobileNavItem href="/upload" label="Upload" icon={Upload} active={isActive('/upload')} />
         <MobileNavItem href="/about" label={t('learnMore')} icon={Info} active={isActive('/about')} />

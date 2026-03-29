@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Prevent Next from inferring the workspace root from lockfiles outside this repo.
+  // (On Windows this can cause build tooling to behave unpredictably.)
+  outputFileTracingRoot: process.cwd(),
   turbopack: {
     root: process.cwd(),
   },

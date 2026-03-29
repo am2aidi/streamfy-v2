@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 
 export type FilterSection = 'movies' | 'music' | 'sports'
 
@@ -27,12 +27,5 @@ function readFilters(): Record<FilterSection, string[]> {
 }
 
 export function useFilterOptions(section: FilterSection) {
-  const [options, setOptions] = useState<string[]>(() => DEFAULT_FILTERS[section])
-
-  useEffect(() => {
-    const stored = readFilters()
-    setOptions(stored[section])
-  }, [section])
-
-  return options
+  return useMemo(() => readFilters()[section], [section])
 }

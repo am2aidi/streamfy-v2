@@ -28,32 +28,34 @@ const defaultFilters = {
 export default function AdminSettingsPage() {
   const { toast } = useToast()
 
-  const [social, setSocial] = useState<SocialLink[]>(defaultSocial)
-  const [payments, setPayments] = useState<PaymentMethod[]>(defaultPayments)
-  const [filters, setFilters] = useState(defaultFilters)
-  const [playlists, setPlaylists] = useState<string[]>(['Workout Mix', 'Night Drive'])
+  const readStored = <T,>(storageKey: string, fallback: T): T => {
+    if (typeof window === 'undefined') return fallback
+    try {
+      const raw = window.localStorage.getItem(storageKey)
+      return raw ? (JSON.parse(raw) as T) : fallback
+    } catch {
+      return fallback
+    }
+  }
+
+  const [social, setSocial] = useState<SocialLink[]>(() => readStored('streamfy-admin-social-links', defaultSocial))
+  const [payments, setPayments] = useState<PaymentMethod[]>(() => readStored('streamfy-admin-payment-methods', defaultPayments))
+  const [filters, setFilters] = useState(() => readStored('streamfy-admin-filter-options', defaultFilters))
+  const [playlists, setPlaylists] = useState<string[]>(() => readStored('streamfy-admin-playlists', ['Workout Mix', 'Night Drive']))
   const [newPlaylist, setNewPlaylist] = useState('')
   const [lang, setLang] = useState<Language>('en')
   const [key, setKey] = useState<TranslationKey>('watchNow')
-  const [value, setValue] = useState('')
-  const [translationOverrides, setTranslationOverrides] = useState<Partial<Record<Language, Partial<Record<TranslationKey, string>>>>>({})
+  const [translationOverrides, setTranslationOverrides] = useState<Partial<Record<Language, Partial<Record<TranslationKey, string>>>>>(() =>
+    readStored('streamfy-translation-overrides', {}),
+  )
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('streamfy-admin-social-links')
-      if (raw) setSocial(JSON.parse(raw))
-      const rawPayments = localStorage.getItem('streamfy-admin-payment-methods')
-      if (rawPayments) setPayments(JSON.parse(rawPayments))
-      const rawFilters = localStorage.getItem('streamfy-admin-filter-options')
-      if (rawFilters) setFilters(JSON.parse(rawFilters))
-      const rawPlaylists = localStorage.getItem('streamfy-admin-playlists')
-      if (rawPlaylists) setPlaylists(JSON.parse(rawPlaylists))
-      const rawTx = localStorage.getItem('streamfy-translation-overrides')
-      if (rawTx) setTranslationOverrides(JSON.parse(rawTx))
-    } catch {
-      // ignore malformed storage
-    }
-  }, [])
+  const resolveTranslationValue = (nextLang: Language, nextKey: TranslationKey) => {
+    const selected = translations[nextLang] as Partial<Record<TranslationKey, string>>
+    const fallback = translations.en as Record<TranslationKey, string>
+    return translationOverrides[nextLang]?.[nextKey] ?? selected[nextKey] ?? fallback[nextKey] ?? ''
+  }
+
+  const [value, setValue] = useState(() => resolveTranslationValue('en', 'watchNow'))
 
   const saveSocial = () => {
     localStorage.setItem('streamfy-admin-social-links', JSON.stringify(social))
@@ -96,12 +98,6 @@ export default function AdminSettingsPage() {
     localStorage.setItem('streamfy-translation-overrides', JSON.stringify(next))
     toast({ title: 'Translation saved', description: `${lang} → ${key}` })
   }
-
-  useEffect(() => {
-    const selected = translations[lang] as Partial<Record<TranslationKey, string>>
-    const fallback = translations.en as Record<TranslationKey, string>
-    setValue(translationOverrides[lang]?.[key] ?? selected[key] ?? fallback[key] ?? '')
-  }, [key, lang, translationOverrides])
 
   const allKeys = useMemo(() => Object.keys(translations.en) as TranslationKey[], [])
 
@@ -244,12 +240,28 @@ export default function AdminSettingsPage() {
       <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
         <h3 className="text-sm font-semibold">Language Translation Manager</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-[180px_220px_1fr_auto]">
-          <select value={lang} onChange={(e) => setLang(e.target.value as Language)} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm">
+          <select
+            value={lang}
+            onChange={(e) => {
+              const nextLang = e.target.value as Language
+              setLang(nextLang)
+              setValue(resolveTranslationValue(nextLang, key))
+            }}
+            className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm"
+          >
             {languages.map((l) => (
               <option key={l.code} value={l.code}>{l.name}</option>
             ))}
           </select>
-          <select value={key} onChange={(e) => setKey(e.target.value as TranslationKey)} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm">
+          <select
+            value={key}
+            onChange={(e) => {
+              const nextKey = e.target.value as TranslationKey
+              setKey(nextKey)
+              setValue(resolveTranslationValue(lang, nextKey))
+            }}
+            className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm"
+          >
             {allKeys.map((k) => (
               <option key={k} value={k}>{k}</option>
             ))}

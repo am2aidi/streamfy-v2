@@ -63,6 +63,14 @@ function normalizeRows(rows: SportsRow[]) {
     })
 }
 
+function stablePseudoCount(input: string) {
+  let hash = 0
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash * 31 + input.charCodeAt(i)) >>> 0
+  }
+  return (hash % 30) + 5
+}
+
 export default function AdminSportsPage() {
   const { toast } = useToast()
   const [rows, setRows] = useState<SportsRow[]>(() => normalizeRows(initialRows))
@@ -238,7 +246,7 @@ export default function AdminSportsPage() {
               {countryOptions.map((country) => (
                 <div key={country} className="flex items-center justify-between rounded-lg bg-white/[0.04] px-2.5 py-2 text-xs text-slate-300">
                   <span>{country}</span>
-                  <span className="text-slate-500">{Math.floor(Math.random() * 30) + 5}</span>
+                  <span className="text-slate-500">{stablePseudoCount(country)}</span>
                 </div>
               ))}
             </div>

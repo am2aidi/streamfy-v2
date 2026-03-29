@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Bot, Send, UserSearch, Users as UsersIcon } from 'lucide-react'
-import { useSearchParams } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { useAuth } from '@/components/AuthProvider'
@@ -24,7 +23,6 @@ const ROOMS = [{ id: 'feedback', name: 'Feedback Room', description: 'Share idea
 const BOT_USER: PublicUser = { id: 'u-bot', name: `${BRAND_NAME} Bot`, username: 'cinepro_bot' }
 
 export function ChatClient() {
-  const params = useSearchParams()
   const { user, isAuthenticated, openSignIn } = useAuth()
   const { messages, send, sendRoom } = useChat()
   const { settings } = useAppSettings()
@@ -33,16 +31,15 @@ export function ChatClient() {
 
   const [users, setUsers] = useState(() => listPublicUsers())
   const [query, setQuery] = useState('')
-  const [active, setActive] = useState<ActiveTarget>({ kind: 'room', roomId: 'feedback' })
+  const [active, setActive] = useState<ActiveTarget>(() => {
+    if (typeof window === 'undefined') return { kind: 'room', roomId: 'feedback' }
+    const next = new URLSearchParams(window.location.search).get('u')
+    return next ? { kind: 'dm', userId: next } : { kind: 'room', roomId: 'feedback' }
+  })
   const [text, setText] = useState('')
   const [botReplies, setBotReplies] = useState<BotQuickReply[]>([])
 
   useEffect(() => subscribeToUsers(() => setUsers(listPublicUsers())), [])
-
-  useEffect(() => {
-    const next = params.get('u')
-    if (next) setActive({ kind: 'dm', userId: next })
-  }, [params])
 
   const me = user?.id ?? ''
 

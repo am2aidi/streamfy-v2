@@ -114,7 +114,7 @@ export function SearchClient() {
               {movies.length ? (
                 <ResultSection title="Movies / TV / Animation">
                   {movies.map((m) => (
-                    <ResultItem key={m.id} href={`/movies/${m.id}`} title={m.title} meta={`${m.year} â€¢ ${m.genre}`} />
+                    <ResultItem key={m.id} href={`/movies/${m.id}`} title={m.title} meta={`${m.year} • ${m.genre}`} />
                   ))}
                 </ResultSection>
               ) : null}
@@ -122,7 +122,7 @@ export function SearchClient() {
               {tracks.length ? (
                 <ResultSection title="Music">
                   {tracks.map((t) => (
-                    <ResultItem key={t.id} href={`/music/${t.id}`} title={t.title} meta={`${t.artist} â€¢ ${t.genre}`} />
+                    <ResultItem key={t.id} href={`/music/${t.id}`} title={t.title} meta={`${t.artist} • ${t.genre}`} />
                   ))}
                 </ResultSection>
               ) : null}
@@ -134,7 +134,7 @@ export function SearchClient() {
                       key={m.id}
                       href={`/sports/${m.id}`}
                       title={`${m.team1.name} vs ${m.team2.name}`}
-                      meta={`${m.league} â€¢ ${m.date}`}
+                      meta={`${m.league} • ${m.date}`}
                     />
                   ))}
                 </ResultSection>

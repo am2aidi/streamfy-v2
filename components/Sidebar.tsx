@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Heart, Home, Info, MessageCircle, Music, PlaySquare, Search, Settings, Share2, Trophy, Tv2, Users } from 'lucide-react'
+import { Home, Info, Music, Share2, Tv2, Upload } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { StreamfyLogo } from '@/components/StreamfyLogo'
 import { BRAND_NAME } from '@/lib/brand'
@@ -47,17 +47,11 @@ export function Sidebar() {
           {/* Navigation */}
           <nav className="flex flex-col gap-2">
             <NavItemLink href="/" label={t('home')} icon={Home} active={isActive('/')} />
-            <NavItemLink href="/search" label={t('search')} icon={Search} active={isActive('/search')} />
-            <NavItemLink href="/community" label={t('community')} icon={Users} active={isActive('/community')} />
-            <NavItemLink href="/chat" label={t('chat')} icon={MessageCircle} active={isActive('/chat')} />
             <div className="my-1 h-px w-8 bg-white/10" />
             <NavItemLink href="/movies" label={t('movies')} icon={Tv2} active={isActive('/movies')} />
             <NavItemLink href="/music" label={t('music')} icon={Music} active={isActive('/music')} />
-            <NavItemLink href="/sports" label="Live Sports" icon={Trophy} active={isActive('/sports')} />
-            <NavItemLink href="/shorts" label="Shorts" icon={PlaySquare} active={isActive('/shorts')} />
-            <NavItemLink href="/watchlist" label="Watchlist" icon={Heart} active={isActive('/watchlist')} />
             <div className="my-1 h-px w-8 bg-white/10" />
-            <NavItemLink href="/settings" label={t('settings')} icon={Settings} active={isActive('/settings')} />
+            <NavItemLink href="/upload" label="Upload" icon={Upload} active={isActive('/upload')} />
             <NavItemLink href="/about" label={t('learnMore')} icon={Info} active={isActive('/about')} />
           </nav>
 
@@ -88,13 +82,12 @@ export function Sidebar() {
 
     {/* Mobile bottom navigation */}
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black/85 backdrop-blur-xl md:hidden">
-      <div className="mx-auto grid max-w-[900px] grid-cols-6 px-2 py-2">
+      <div className="mx-auto grid max-w-[900px] grid-cols-5 px-2 py-2">
         <MobileNavItem href="/" label={t('home')} icon={Home} active={isActive('/')} />
-        <MobileNavItem href="/search" label={t('search')} icon={Search} active={isActive('/search')} />
         <MobileNavItem href="/movies" label={t('movies')} icon={Tv2} active={isActive('/movies')} />
         <MobileNavItem href="/music" label={t('music')} icon={Music} active={isActive('/music')} />
-        <MobileNavItem href="/sports" label={t('sports')} icon={Trophy} active={isActive('/sports')} />
-        <MobileNavItem href="/chat" label={t('chat')} icon={MessageCircle} active={isActive('/chat')} />
+        <MobileNavItem href="/upload" label="Upload" icon={Upload} active={isActive('/upload')} />
+        <MobileNavItem href="/about" label={t('learnMore')} icon={Info} active={isActive('/about')} />
       </div>
     </nav>
     </>

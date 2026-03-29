@@ -1,14 +1,16 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { ArrowUpCircle, Bell, CircleHelp, Download, Gift, Globe, Info, LogOut, Moon, Settings, Sun, UserCircle2 } from 'lucide-react'
+import { ArrowUpCircle, Bell, CircleHelp, Download, Gift, Globe, Heart, Info, LogOut, MessageCircle, Moon, Phone, PlaySquare, Settings, Share2, Sun, UserCircle2 } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { getTranslation, languages } from '@/lib/translations'
 import { useToast } from '@/hooks/use-toast'
 import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
 import { StreamfyLogo } from '@/components/StreamfyLogo'
+import { BRAND_NAME } from '@/lib/brand'
 
 export function Header() {
   const router = useRouter()
@@ -23,6 +25,22 @@ export function Header() {
     [settings.language]
   )
   const showCompactBanner = !['/', '/movies', '/music', '/sports'].includes(pathname)
+
+  const sharePage = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : ''
+    if (!url) return
+    try {
+      const nav = navigator as unknown as { share?: (data: { title?: string; url?: string }) => Promise<void>; clipboard?: Clipboard }
+      if (nav.share) {
+        await nav.share({ title: BRAND_NAME, url })
+        return
+      }
+      await nav.clipboard?.writeText(url)
+      toast({ title: t('linkCopied'), description: t('shareWithFriends') })
+    } catch {
+      toast({ title: t('couldNotShare'), description: t('copyLinkFromAddressBar') })
+    }
+  }
 
   return (
     <header className="relative px-6 py-4">
@@ -39,7 +57,7 @@ export function Header() {
         <select
           value={settings.language}
           onChange={(e) => updateSetting('language', e.target.value as typeof settings.language)}
-          className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-200"
+          className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-200 md:block"
         >
           {languages.map((lang) => (
             <option key={lang.code} value={lang.code}>
@@ -57,6 +75,33 @@ export function Header() {
         </button>
 
         {/* Search lives on /search (sidebar) */}
+
+        <button
+          onClick={() => router.push('/shorts')}
+          className="hidden h-9 w-9 items-center justify-center rounded-full bg-white/5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white sm:flex"
+          aria-label="Shorts"
+          title="Shorts"
+        >
+          <PlaySquare size={16} />
+        </button>
+
+        <button
+          onClick={() => router.push('/watchlist')}
+          className="hidden h-9 w-9 items-center justify-center rounded-full bg-white/5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white sm:flex"
+          aria-label="Watchlist"
+          title="Watchlist"
+        >
+          <Heart size={16} />
+        </button>
+
+        <button
+          onClick={() => router.push('/chat')}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+          aria-label={t('chat')}
+          title={t('chat')}
+        >
+          <MessageCircle size={16} />
+        </button>
 
         <button
           onClick={() =>
@@ -82,16 +127,46 @@ export function Header() {
             }}
             aria-label="Account menu"
           >
-            <UserCircle2 size={17} />
+            {isAuthenticated && user?.avatarUrl ? (
+              <Image
+                src={user.avatarUrl}
+                alt=""
+                width={36}
+                height={36}
+                className="h-9 w-9 rounded-full object-cover"
+                priority
+              />
+            ) : (
+              <UserCircle2 size={17} />
+            )}
           </button>
 
           {showMenu && (
             <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-white/10 bg-black/95 p-2">
               <div className="border-b border-white/10 px-3 py-2">
-                <p className="text-sm font-semibold text-white">
-                  {isAuthenticated ? user?.name ?? (user?.username ? `@${user.username}` : null) ?? user?.email ?? user?.phone ?? 'User' : t('guestMode')}
-                </p>
-                <p className="text-xs text-gray-400">{languageName}</p>
+                <div className="flex items-center gap-3">
+                  {isAuthenticated && user?.avatarUrl ? (
+                    <Image
+                      src={user.avatarUrl}
+                      alt=""
+                      width={36}
+                      height={36}
+                      className="h-9 w-9 rounded-full object-cover"
+                      priority
+                    />
+                  ) : (
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-gray-300">
+                      <UserCircle2 size={18} />
+                    </div>
+                  )}
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {isAuthenticated ? user?.name ?? (user?.username ? `@${user.username}` : null) ?? user?.email ?? user?.phone ?? 'User' : t('guestMode')}
+                    </p>
+                    <p className="text-xs text-gray-400">{languageName}</p>
+                  </div>
+                </div>
               </div>
               {!isAuthenticated ? (
                 <>
@@ -177,6 +252,22 @@ export function Header() {
                 label={t('learnMore')}
                 onClick={() => {
                   router.push('/about')
+                  setShowMenu(false)
+                }}
+              />
+              <MenuAction
+                icon={Share2}
+                label="Share"
+                onClick={() => {
+                  sharePage()
+                  setShowMenu(false)
+                }}
+              />
+              <MenuAction
+                icon={Phone}
+                label="WhatsApp"
+                onClick={() => {
+                  window.open('https://wa.me/250700000000', '_blank', 'noopener,noreferrer')
                   setShowMenu(false)
                 }}
               />

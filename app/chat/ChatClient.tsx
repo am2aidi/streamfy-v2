@@ -20,8 +20,12 @@ type ActiveTarget =
   | { kind: 'room'; roomId: string }
   | { kind: 'dm'; userId: string }
 
-const ROOMS = [{ id: 'feedback', name: 'Feedback Room', description: 'Share ideas, report issues, and request features.' }] as const
-const BOT_USER: PublicUser = { id: 'u-bot', name: `${BRAND_NAME} Bot`, username: 'cinepro_bot' }
+const ROOMS = [
+  { id: 'general', name: 'General Room', description: 'Say hi and chat with the community.' },
+  { id: 'requests', name: 'Requests Room', description: 'Ask for movies/songs/sports content and request uploads.' },
+  { id: 'feedback', name: 'Feedback Room', description: 'Share ideas, report issues, and request features.' },
+] as const
+const BOT_USER: PublicUser = { id: 'u-bot', name: `${BRAND_NAME} Bot`, username: 'streamfy_bot' }
 
 export function ChatClient() {
   const params = useSearchParams()
@@ -33,7 +37,7 @@ export function ChatClient() {
 
   const [users, setUsers] = useState(() => listPublicUsers())
   const [query, setQuery] = useState('')
-  const [active, setActive] = useState<ActiveTarget>({ kind: 'room', roomId: 'feedback' })
+  const [active, setActive] = useState<ActiveTarget>({ kind: 'room', roomId: 'general' })
   const [text, setText] = useState('')
   const [botReplies, setBotReplies] = useState<BotQuickReply[]>([])
 
@@ -290,4 +294,3 @@ export function ChatClient() {
     </div>
   )
 }
-

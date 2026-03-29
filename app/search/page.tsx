@@ -3,6 +3,8 @@ import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { SearchClient } from '@/app/search/SearchClient'
 
+export const dynamic = 'force-dynamic'
+
 export default function SearchPage() {
   // `useSearchParams` requires a Suspense boundary to avoid failing static prerender/export.
   return (
@@ -28,4 +30,3 @@ function SearchPageFallback() {
     </div>
   )
 }
-

@@ -139,9 +139,11 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     root.lang = settings.language
     if (settings.theme === 'light') {
       root.classList.add('light-theme')
-      root.classList.remove('dark')
+      // Keep the app UI dark even in "light" preference to preserve visibility
+      // (mobile nav/status bars and icon dock stay consistent).
+      root.classList.add('dark')
       root.classList.remove('dark-theme')
-      root.style.colorScheme = 'light'
+      root.style.colorScheme = 'dark'
     } else {
       root.classList.add('dark')
       root.classList.remove('light-theme')

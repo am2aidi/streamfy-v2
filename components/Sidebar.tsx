@@ -3,10 +3,10 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Heart, Home, Info, MessageCircle, Music, PlaySquare, Search, Settings, Share2, Trophy, Tv2, Users } from 'lucide-react'
+import { Heart, Home, Info, MessageCircle, Music, PlaySquare, Search, Settings, Share2, Trophy, Tv2, UploadCloud, Users } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { StreamfyLogo } from '@/components/StreamfyLogo'
-import { BRAND_NAME } from '@/lib/brand'
+import { BRAND_NAME, SUPPORT_WHATSAPP_E164 } from '@/lib/brand'
 import { getTranslation } from '@/lib/translations'
 import { useToast } from '@/hooks/use-toast'
 
@@ -49,6 +49,7 @@ export function Sidebar() {
             <NavItemLink href="/" label={t('home')} icon={Home} active={isActive('/')} />
             <NavItemLink href="/search" label={t('search')} icon={Search} active={isActive('/search')} />
             <NavItemLink href="/community" label={t('community')} icon={Users} active={isActive('/community')} />
+            <NavItemLink href="/upload" label="Uploads" icon={UploadCloud} active={isActive('/upload')} />
             <NavItemLink href="/chat" label={t('chat')} icon={MessageCircle} active={isActive('/chat')} />
             <div className="my-1 h-px w-8 bg-white/10" />
             <NavItemLink href="/movies" label={t('movies')} icon={Tv2} active={isActive('/movies')} />
@@ -72,7 +73,7 @@ export function Sidebar() {
               <Share2 size={15} />
             </button>
             <a
-              href="https://wa.me/250700000000"
+              href={`https://wa.me/${SUPPORT_WHATSAPP_E164}`}
               target="_blank"
               rel="noreferrer"
               title="WhatsApp"

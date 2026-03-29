@@ -90,8 +90,8 @@ export default function SettingsPage() {
   const [remotePlans, setRemotePlans] = useState<SubscriptionPlan[] | null>(null)
   const [profileData, setProfileData] = useState({
     fullName: `${BRAND_NAME} User`,
-    username: 'cineprouser',
-    email: 'user@cinepro.com',
+    username: 'streamfyuser',
+    email: 'user@streamfy.com',
     phone: '+250 798 123 456',
     bio: 'A passionate streaming enthusiast',
   })

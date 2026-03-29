@@ -91,79 +91,81 @@ export default function MusicPage() {
             <>
               <MusicSection />
 
-          <section className="flex flex-col gap-4">
-            <h3 className="text-white text-xl font-bold">{t('allTracks')}</h3>
-            <div className="flex items-center gap-2 mb-2">
-            <label className="flex items-center gap-1 text-gray-400 text-sm">
-              <input type="checkbox" className="accent-[#f4a30a]" checked={favoritesOnly} onChange={(e) => setFavoritesOnly(e.target.checked)} />
-              {t('favoritesOnly')}
-            </label>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredTracks.map((track) => (
-                <div key={track.id} className="group relative rounded-xl overflow-hidden border border-white/10 bg-white/5">
-                  <Link href={`/music/${track.id}`} className="block">
-                    <div className="relative h-56">
-                      <Image src={track.image} alt={track.title} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent" />
-                      <div className="absolute bottom-3 left-3 right-3">
-                        <p className="text-white text-sm font-semibold">{track.title}</p>
-                        <p className="text-gray-400 text-xs">{track.artist} • {track.genre}</p>
-                      </div>
+              <section className="flex flex-col gap-4">
+                <h3 className="text-white text-xl font-bold">{t('allTracks')}</h3>
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="flex items-center gap-2 text-gray-400 text-sm">
+                    <input
+                      type="checkbox"
+                      className="accent-[#f4a30a]"
+                      checked={favoritesOnly}
+                      onChange={(e) => setFavoritesOnly(e.target.checked)}
+                    />
+                    {t('favoritesOnly')}
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {filteredTracks.map((track) => (
+                    <div key={track.id} className="group relative rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                      <Link href={`/music/${track.id}`} className="block">
+                        <div className="relative h-56">
+                          <Image src={track.image} alt={track.title} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent" />
+                          <div className="absolute bottom-3 left-3 right-3">
+                            <p className="text-white text-sm font-semibold">{track.title}</p>
+                            <p className="text-gray-400 text-xs">
+                              {track.artist} • {track.genre}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          const isSaved = settings.watchlistTracks.includes(track.id)
+                          const next = isSaved ? settings.watchlistTracks.filter((id) => id !== track.id) : [...settings.watchlistTracks, track.id]
+                          updateSetting('watchlistTracks', next)
+                        }}
+                        className="absolute top-2 left-2 text-white/70 hover:text-[#f4a30a]"
+                        aria-label={settings.watchlistTracks.includes(track.id) ? 'Remove from watchlist' : 'Add to watchlist'}
+                      >
+                        <Heart size={18} fill={settings.watchlistTracks.includes(track.id) ? '#f4a30a' : 'transparent'} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          const isFav = settings.favoriteTracks.includes(track.id)
+                          const next = isFav ? settings.favoriteTracks.filter((id) => id !== track.id) : [...settings.favoriteTracks, track.id]
+                          updateSetting('favoriteTracks', next)
+                        }}
+                        className="absolute top-2 right-2 text-white/70 hover:text-[#f4a30a]"
+                        aria-label={settings.favoriteTracks.includes(track.id) ? 'Unfavorite' : 'Favorite'}
+                      >
+                        <Star size={18} fill={settings.favoriteTracks.includes(track.id) ? '#f4a30a' : 'transparent'} />
+                      </button>
                     </div>
-                  </Link>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault()
-                      const isSaved = settings.watchlistTracks.includes(track.id)
-                      const next = isSaved
-                        ? settings.watchlistTracks.filter((id) => id !== track.id)
-                        : [...settings.watchlistTracks, track.id]
-                      updateSetting('watchlistTracks', next)
-                    }}
-                    className="absolute top-2 left-2 text-white/70 hover:text-[#f4a30a]"
-                    aria-label={settings.watchlistTracks.includes(track.id) ? 'Remove from watchlist' : 'Add to watchlist'}
-                  >
-                    <Heart size={18} fill={settings.watchlistTracks.includes(track.id) ? '#f4a30a' : 'transparent'} />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault()
-                      const isFav = settings.favoriteTracks.includes(track.id)
-                      const next = isFav
-                        ? settings.favoriteTracks.filter((id) => id !== track.id)
-                        : [...settings.favoriteTracks, track.id]
-                      updateSetting('favoriteTracks', next)
-                    }}
-                    className="absolute top-2 right-2 text-white/70 hover:text-[#f4a30a]"
-                    aria-label={settings.favoriteTracks.includes(track.id) ? 'Unfavorite' : 'Favorite'}
-                  >
-                    <Star size={18} fill={settings.favoriteTracks.includes(track.id) ? '#f4a30a' : 'transparent'} />
-                  </button>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
+              </section>
 
-          {/* Additional Music Collections */}
-          <section className="flex flex-col gap-4">
-            <h3 className="text-white text-xl font-bold">{t('forYou')}</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { title: 'Workout Beats', desc: 'High energy music for your fitness routine' },
-                { title: 'Chill Vibes', desc: 'Relaxing music for everyday moments' },
-                { title: 'Party Mix', desc: 'The hottest tracks to get the party started' },
-              ].map((playlist, i) => (
-                <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-5 hover:bg-white/10 transition-colors cursor-pointer">
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#f4a30a] to-[#e67e22] flex items-center justify-center text-white mb-3">
-                    <Music size={20} />
-                  </div>
-                  <h4 className="text-white font-medium text-sm">{playlist.title}</h4>
-                  <p className="text-gray-400 text-xs mt-1">{playlist.desc}</p>
+              <section className="flex flex-col gap-4">
+                <h3 className="text-white text-xl font-bold">{t('forYou')}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { title: 'Workout Beats', desc: 'High energy music for your fitness routine' },
+                    { title: 'Chill Vibes', desc: 'Relaxing music for everyday moments' },
+                    { title: 'Party Mix', desc: 'The hottest tracks to get the party started' },
+                  ].map((playlist, i) => (
+                    <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-5 hover:bg-white/10 transition-colors cursor-pointer">
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#f4a30a] to-[#e67e22] flex items-center justify-center text-white mb-3">
+                        <Music size={20} />
+                      </div>
+                      <h4 className="text-white font-medium text-sm">{playlist.title}</h4>
+                      <p className="text-gray-400 text-xs mt-1">{playlist.desc}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
+              </section>
             </>
           ) : null}
         </main>

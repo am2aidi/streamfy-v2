@@ -3,6 +3,8 @@ import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { ChatClient } from '@/app/chat/ChatClient'
 
+export const dynamic = 'force-dynamic'
+
 export default function ChatPage() {
   // `useSearchParams` requires a Suspense boundary to avoid failing static prerender/export.
   // This keeps `/chat` deployable even when `output: 'export'` is enabled.

@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: `${BRAND_NAME} - Movies, Music & Sports`,
   description: `${BRAND_NAME} entertainment platform`,
   generator: 'v0.app',
+  themeColor: '#000000',
   icons: {
     icon: [
       { url: '/streamfy-s-logo-light.svg', media: '(prefers-color-scheme: light)', type: 'image/svg+xml' },

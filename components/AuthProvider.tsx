@@ -49,7 +49,7 @@ const DEFAULT_DEMO_USERS: StoredUser[] = [
   { id: 'u-alina', name: 'Alina', username: 'alina', email: 'alina@example.com', password: 'streamfy123', provider: 'email' },
   { id: 'u-musa', name: 'Musa', username: 'musa', email: 'musa@example.com', password: 'streamfy123', provider: 'email' },
   { id: 'u-ken', name: 'Ken', username: 'ken', email: 'ken@example.com', password: 'streamfy123', provider: 'email' },
-  { id: 'u-support', name: `${BRAND_NAME} Support`, username: 'cinepro_support', email: 'support@cinepro.io', password: 'streamfy123', provider: 'email' },
+  { id: 'u-support', name: `${BRAND_NAME} Support`, username: 'streamfy_support', email: 'support@streamfy.com', password: 'streamfy123', provider: 'email' },
 ]
 
 const countryCodes = [

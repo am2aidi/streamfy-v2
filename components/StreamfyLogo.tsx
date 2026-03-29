@@ -1,19 +1,128 @@
+'use client'
+
 import * as React from 'react'
 import { BRAND_NAME } from '@/lib/brand'
 
-export type StreamfyLogoProps = Omit<React.SVGProps<SVGSVGElement>, 'width' | 'height'> & {
+export type StreamfyLogoProps = Omit<React.HTMLAttributes<HTMLSpanElement>, 'children'> & {
   size?: number
   title?: string
+  /**
+   * Put your logo file at `public/streamfy-logo.png` (recommended).
+   * This component will crop/zoom it into a perfect circle.
+   */
+  src?: string
+  /**
+   * Manual zoom override (e.g. 2.4). When provided, auto-crop zoom detection is skipped.
+   */
+  zoom?: number
 }
 
-export function StreamfyLogo({ size = 32, title = BRAND_NAME, className, ...props }: StreamfyLogoProps) {
+const autoCropZoomCache = new Map<string, number>()
+
+function detectTightZoom(img: HTMLImageElement) {
+  const canvasSize = 256
+  const canvas = document.createElement('canvas')
+  canvas.width = canvasSize
+  canvas.height = canvasSize
+
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return null
+
+  ctx.clearRect(0, 0, canvasSize, canvasSize)
+  ctx.drawImage(img, 0, 0, canvasSize, canvasSize)
+  const { data } = ctx.getImageData(0, 0, canvasSize, canvasSize)
+
+  const threshold = 28
+  let minX = canvasSize
+  let minY = canvasSize
+  let maxX = -1
+  let maxY = -1
+
+  for (let y = 0; y < canvasSize; y += 2) {
+    for (let x = 0; x < canvasSize; x += 2) {
+      const idx = (y * canvasSize + x) * 4
+      const r = data[idx]
+      const g = data[idx + 1]
+      const b = data[idx + 2]
+      const a = data[idx + 3]
+      if (a < 10) continue
+      if (r <= threshold && g <= threshold && b <= threshold) continue
+
+      if (x < minX) minX = x
+      if (y < minY) minY = y
+      if (x > maxX) maxX = x
+      if (y > maxY) maxY = y
+    }
+  }
+
+  if (maxX < 0 || maxY < 0) return null
+
+  const bbox = Math.max(maxX - minX + 1, maxY - minY + 1)
+  const rawZoom = canvasSize / bbox
+  return Math.min(4, Math.max(1, rawZoom * 1.04))
+}
+
+export function StreamfyLogo({
+  size = 32,
+  title = BRAND_NAME,
+  className,
+  src = '/streamfy-logo.png',
+  zoom,
+  style,
+  ...props
+}: StreamfyLogoProps) {
+  const [useImage, setUseImage] = React.useState(true)
+  const [autoZoom, setAutoZoom] = React.useState<number | null>(() => autoCropZoomCache.get(src) ?? null)
+
   const isHidden = props['aria-hidden'] === true || props['aria-hidden'] === 'true'
   const ariaProps = isHidden ? { 'aria-hidden': true } : { role: 'img', 'aria-label': title }
-  const style = {
+
+  if (useImage) {
+    const wrapperStyle: React.CSSProperties = {
+      width: size,
+      height: size,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 9999,
+      overflow: 'hidden',
+      background: 'transparent',
+      ...(style ?? {}),
+    }
+
+    return (
+      <span className={className} style={wrapperStyle} {...ariaProps} {...props}>
+        <img
+          src={src}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          onError={() => setUseImage(false)}
+          onLoad={(e) => {
+            if (typeof zoom === 'number') return
+            if (autoCropZoomCache.has(src)) return
+            const computed = detectTightZoom(e.currentTarget)
+            if (!computed) return
+            autoCropZoomCache.set(src, computed)
+            setAutoZoom(computed)
+          }}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            transform: `scale(${autoZoom ?? zoom ?? 1.35})`,
+            transformOrigin: 'center',
+            display: 'block',
+          }}
+        />
+      </span>
+    )
+  }
+
+  const svgStyle = {
     ['--logo-gold' as never]: 'var(--app-accent-a)',
     ['--logo-gold-dk' as never]: '#9a5600',
     ['--logo-ink' as never]: '#000000',
-    ...(props.style ?? {}),
   }
 
   return (
@@ -25,9 +134,9 @@ export function StreamfyLogo({ size = 32, title = BRAND_NAME, className, ...prop
       xmlns="http://www.w3.org/2000/svg"
       focusable="false"
       className={className}
-      style={style}
-      {...ariaProps}
-      {...props}
+      style={svgStyle}
+      {...(ariaProps as React.SVGProps<SVGSVGElement>)}
+      {...(props as React.SVGProps<SVGSVGElement>)}
     >
       <defs>
         <linearGradient id="streamfyGold" x1="112" y1="88" x2="408" y2="424" gradientUnits="userSpaceOnUse">
@@ -37,23 +146,17 @@ export function StreamfyLogo({ size = 32, title = BRAND_NAME, className, ...prop
         </linearGradient>
       </defs>
 
-      {/* Transparent background: the mark uses only strokes/fills */}
       <g vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round">
-        {/* Outer circle (gold) - expanded to fill icon */}
         <circle cx="256" cy="256" r="232" stroke="url(#streamfyGold)" strokeWidth="22" fill="none" />
         <circle cx="256" cy="256" r="206" stroke="url(#streamfyGold)" strokeWidth="6" opacity="0.45" fill="none" />
 
-        {/* Central video sign */}
         <g>
           <rect x="140" y="178" width="232" height="156" rx="36" stroke="url(#streamfyGold)" strokeWidth="22" fill="none" />
           <path d="M372 214 L444 186 V326 L372 298 Z" stroke="url(#streamfyGold)" strokeWidth="22" fill="none" />
-
-          {/* Inner bezel + play (dark/ink) */}
           <rect x="170" y="210" width="172" height="92" rx="24" stroke="var(--logo-ink)" strokeWidth="10" fill="none" opacity="0.92" />
           <path d="M246 232 L246 280 L300 256 Z" fill="var(--logo-ink)" stroke="none" opacity="0.92" />
         </g>
 
-        {/* Small music note */}
         <g>
           <path
             d="M148 368 C148 354 158 344 172 344 C184 344 192 352 192 364 C192 378 182 388 168 388 C154 388 148 380 148 368 Z"
@@ -70,7 +173,6 @@ export function StreamfyLogo({ size = 32, title = BRAND_NAME, className, ...prop
           />
         </g>
 
-        {/* Small football (soccer ball) */}
         <g>
           <circle cx="364" cy="378" r="44" stroke="url(#streamfyGold)" strokeWidth="16" fill="none" />
           <path d="M332 368 C346 356 382 356 396 368" stroke="var(--logo-ink)" strokeWidth="8" fill="none" opacity="0.9" />

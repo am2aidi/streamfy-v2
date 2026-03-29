@@ -22,7 +22,12 @@ export default function CommunityPage() {
   const { settings } = useAppSettings()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
 
-  const [tab, setTab] = useState<Tab>('published')
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window === 'undefined') return 'published'
+    const raw = new URLSearchParams(window.location.search).get('tab')
+    if (raw === 'submit' || raw === 'all' || raw === 'published') return raw
+    return 'published'
+  })
   const [kind, setKind] = useState<CommunityKind>('movie')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')

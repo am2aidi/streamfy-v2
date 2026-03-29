@@ -20,7 +20,7 @@ type ActiveTarget =
   | { kind: 'dm'; userId: string }
 
 const ROOMS = [{ id: 'feedback', name: 'Feedback Room', description: 'Share ideas, report issues, and request features.' }] as const
-const BOT_USER: PublicUser = { id: 'u-bot', name: `${BRAND_NAME} Bot`, username: 'cinepro_bot' }
+const BOT_USER: PublicUser = { id: 'u-bot', name: `${BRAND_NAME} Bot`, username: 'streamfy_bot' }
 
 export function ChatClient() {
   const { user, isAuthenticated, openSignIn } = useAuth()

@@ -1,4 +1,4 @@
-// Multi-language translations for CinePro
+// Multi-language translations for Streamfy
 export const translations = {
   en: {
     home: 'Home',
@@ -140,7 +140,7 @@ export const translations = {
     catchLiveMoment: 'Catch Every Live Moment',
     trendingMusicTitle: 'Trending Music',
     topHitsWeek: 'Top Hits This Week',
-    streamfyFor: 'CinePro for',
+    streamfyFor: 'Streamfy for',
     startSearching: 'Start searching...',
     allYears: 'All years',
     other: 'Other',
@@ -188,7 +188,7 @@ export const translations = {
     upgradePlan: 'Upgrade plan',
     getAppsExtensions: 'Get apps and extensions',
     appsPrototypeDesc: 'Apps and extensions prototype action.',
-    giftStreamfy: 'Gift CinePro',
+    giftStreamfy: 'Gift Streamfy',
     learnMore: 'Learn more',
     linkCopied: 'Link copied',
     shareWithFriends: 'Share it with your friends.',
@@ -197,9 +197,9 @@ export const translations = {
     shareAction: 'Share',
     copyLink: 'Copy Link',
 
-    aboutStreamfyTitle: 'About CinePro',
+    aboutStreamfyTitle: 'About Streamfy',
     aboutStreamfyDesc:
-      'CinePro is your all-in-one entertainment hub for movies, live sports, and trending music. Browse freely, then sign in only when you want to use restricted features.',
+      'Streamfy is your all-in-one entertainment hub for movies, live sports, and trending music. Browse freely, then sign in only when you want to use restricted features.',
     startExploring: 'Start Exploring',
     albumsCategoriesReleases: 'Albums, categories, and new releases',
     featuredAlbum: 'Featured Album',
@@ -464,7 +464,7 @@ export const translations = {
     upgradePlan: 'Passer au plan superieur',
     getAppsExtensions: 'Applications et extensions',
     appsPrototypeDesc: 'Action prototype des applications et extensions.',
-    giftStreamfy: 'Offrir CinePro',
+    giftStreamfy: 'Offrir Streamfy',
     learnMore: 'En savoir plus',
     linkCopied: 'Lien copie',
     shareWithFriends: 'Partagez-le avec vos amis.',
@@ -473,9 +473,9 @@ export const translations = {
     shareAction: 'Partager',
     copyLink: 'Copier le lien',
 
-    aboutStreamfyTitle: 'A propos de CinePro',
+    aboutStreamfyTitle: 'À propos de Streamfy',
     aboutStreamfyDesc:
-      "CinePro est votre hub tout-en-un pour les films, le sport en direct et la musique tendance. Naviguez librement, puis connectez-vous seulement quand vous voulez utiliser les fonctions limitees.",
+      "Streamfy est votre hub tout-en-un pour les films, le sport en direct et la musique tendance. Naviguez librement, puis connectez-vous seulement quand vous voulez utiliser les fonctions limitees.",
     startExploring: 'Commencer a explorer',
     albumsCategoriesReleases: 'Albums, categories et nouvelles sorties',
     featuredAlbum: 'Album en vedette',
@@ -862,7 +862,7 @@ export const translations = {
     upgradePlan: 'Hindura plan',
     getAppsExtensions: 'Apps n’extensions',
     appsPrototypeDesc: 'Igikorwa cya prototype cy’apps n’extensions.',
-    giftStreamfy: 'Ha impano CinePro',
+    giftStreamfy: 'Ha impano Streamfy',
     learnMore: 'Menya byinshi',
     linkCopied: 'Link yakopiwe',
     shareWithFriends: 'Sangira n’inshuti zawe.',
@@ -871,9 +871,9 @@ export const translations = {
     shareAction: 'Sangira',
     copyLink: 'Kopa link',
 
-    aboutStreamfyTitle: 'Ibyerekeye CinePro',
+    aboutStreamfyTitle: 'Ibyerekeye Streamfy',
     aboutStreamfyDesc:
-      'CinePro ni urubuga rumwe rukomatanya filime, umupira uri live, n’umuziki ukunzwe. Shakisha uko ushaka, hanyuma winjire gusa iyo ukeneye ibikorwa byihariye.',
+      'Streamfy ni urubuga rumwe rukomatanya filime, umupira uri live, n’umuziki ukunzwe. Shakisha uko ushaka, hanyuma winjire gusa iyo ukeneye ibikorwa byihariye.',
     startExploring: 'Tangira gushakisha',
     albumsCategoriesReleases: 'Albums, ibyiciro n’ibisohoka bishya',
     featuredAlbum: 'Album yatoranyijwe',

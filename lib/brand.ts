@@ -1,4 +1,4 @@
-export const BRAND_NAME = 'CinePro'
+export const BRAND_NAME = 'Streamfy'
 
-export const BRAND_SLUG = 'cinepro'
+export const BRAND_SLUG = 'streamfy'
 

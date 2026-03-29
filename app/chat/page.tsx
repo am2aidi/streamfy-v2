@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Send, UserSearch, Users as UsersIcon, Bot } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
@@ -24,6 +24,36 @@ const ROOMS = [{ id: 'feedback', name: 'Feedback Room', description: 'Share idea
 const BOT_USER: PublicUser = { id: 'u-bot', name: `${BRAND_NAME} Bot`, username: 'cinepro_bot' }
 
 export default function ChatPage() {
+  // `useSearchParams` requires a Suspense boundary to avoid failing static prerender/export.
+  // This keeps `/chat` deployable even when `output: 'export'` is enabled.
+  return (
+    <Suspense fallback={<ChatPageFallback />}>
+      <ChatPageInner />
+    </Suspense>
+  )
+}
+
+function ChatPageFallback() {
+  return (
+    <div className="flex min-h-screen bg-black">
+      <Sidebar />
+      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24 md:pb-8">
+        <Header />
+        <main className="px-6">
+          <div className="mb-5">
+            <h1 className="text-white text-3xl font-bold">Chat</h1>
+            <p className="text-gray-400 text-sm mt-1">Loading…</p>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-gray-200">
+            <p>Loading chat…</p>
+          </div>
+        </main>
+      </div>
+    </div>
+  )
+}
+
+function ChatPageInner() {
   const params = useSearchParams()
   const { user, isAuthenticated, openSignIn } = useAuth()
   const { messages, send, sendRoom } = useChat()

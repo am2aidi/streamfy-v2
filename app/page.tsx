@@ -1,6 +1,7 @@
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { HeroSection } from '@/components/HeroSection'
+import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
 import { MoviesSection } from '@/components/MoviesSection'
 import { HomeMusicSection } from '@/components/HomeMusicSection'
 import { SportsPreviewSection } from '@/components/SportsPreviewSection'
@@ -16,12 +17,16 @@ export default function Home() {
         <Header />
         <main className="flex flex-col gap-8 px-6">
           <HeroSection />
+          <LiveMomentsBanner section="compact" />
           <CommunityShelf />
           <ShortsShelf title="Trailers" subtitle="Hover to preview. Click to play." category="movies" limit={4} />
+          <LiveMomentsBanner section="movies" />
           <MoviesSection />
           <ShortsShelf title="Music Reels" subtitle="Hover snippets and highlights." category="music" limit={4} />
+          <LiveMomentsBanner section="music" />
           <HomeMusicSection />
           <ShortsShelf title="Sports Clips" subtitle="Hover match moments." category="sports" limit={4} />
+          <LiveMomentsBanner section="sports" />
           <SportsPreviewSection />
           <AboutStreamfySection />
         </main>

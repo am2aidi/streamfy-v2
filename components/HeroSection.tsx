@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Play, Film, Trophy, Music2 } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation } from '@/lib/translations'
@@ -28,10 +29,23 @@ const slides = [
   },
 ]
 
+const movingMedia = [
+  '/now-in-theaters.jpg',
+  '/dark-pursuit.jpg',
+  '/top-rated.jpg',
+  '/music-featured.jpg',
+  '/trending-songs.jpg',
+  '/new-releases.jpg',
+  '/sports-hero.jpg',
+  '/champions-league.jpg',
+  '/nba-highlights.jpg',
+]
+
 export function HeroSection() {
   const [index, setIndex] = useState(0)
   const { settings } = useAppSettings()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
+  const mediaLoop = [...movingMedia, ...movingMedia]
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -71,6 +85,16 @@ export function HeroSection() {
             <Music2 size={16} />
             {t('exploreMusic')}
           </Link>
+        </div>
+
+        <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-2">
+          <div className="streamfy-media-track flex min-w-max items-center gap-2">
+            {mediaLoop.map((src, i) => (
+              <div key={`${src}-${i}`} className="relative h-16 w-28 shrink-0 overflow-hidden rounded-xl border border-white/10 md:h-20 md:w-36">
+                <Image src={src} alt="" fill className="object-cover" priority={i < 3} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>

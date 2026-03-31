@@ -26,8 +26,15 @@ import { AdminLogo } from '@/components/admin/AdminLogo'
 import { useToast } from '@/hooks/use-toast'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation, languages, type TranslationKey } from '@/lib/translations'
-
-const ADMIN_SESSION_KEY = 'streamfy-admin-session'
+import {
+  clearAdminSession,
+  createAdminSessionFromUserId,
+  getAdminSession,
+  getSessionUserId,
+  subscribeToAdminSession,
+  subscribeToUsers,
+  type AdminSession,
+} from '@/lib/users-store'
 
 type AdminNavItem = { href: string; labelKey: TranslationKey; icon: typeof BarChart3 }
 
@@ -53,7 +60,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const { toast } = useToast()
   const { settings, updateSetting } = useAppSettings()
   const [authorized, setAuthorized] = useState(false)
+  const [admin, setAdmin] = useState<AdminSession | null>(null)
   const t = (key: TranslationKey) => getTranslation(settings.language, key)
+  const notificationCount = 3
 
   const navItems = useMemo<AdminNavItem[]>(
     () => [
@@ -71,21 +80,43 @@ export function AdminShell({ children }: { children: ReactNode }) {
       { href: '/admin/analytics', labelKey: 'analytics', icon: BarChart3 },
       { href: '/admin/settings', labelKey: 'settings', icon: Settings },
     ],
-    [settings.language]
+    []
   )
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem(ADMIN_SESSION_KEY) : null
-    if (!token) {
+    const syncAdmin = () => {
+      const existing = getAdminSession()
+      if (existing) {
+        setAdmin(existing)
+        setAuthorized(true)
+        return
+      }
+
+      const authUserId = getSessionUserId()
+      const elevated = createAdminSessionFromUserId(authUserId)
+      if (elevated) {
+        setAdmin(elevated)
+        setAuthorized(true)
+        return
+      }
+
+      setAdmin(null)
+      setAuthorized(false)
       router.replace('/admin/login')
-      return
     }
-    setAuthorized(true)
+
+    syncAdmin()
+    const stopUsers = subscribeToUsers(syncAdmin)
+    const stopAdmin = subscribeToAdminSession(syncAdmin)
+    return () => {
+      stopUsers()
+      stopAdmin()
+    }
   }, [router])
 
   const activeLabel = useMemo(() => {
     const active = navItems.find((item) => (item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href)))
-    return active ? t(active.labelKey) : 'Admin'
+    return active ? getTranslation(settings.language, active.labelKey) : 'Admin'
   }, [pathname, navItems, settings.language])
 
   const accent = useMemo(() => {
@@ -101,6 +132,17 @@ export function AdminShell({ children }: { children: ReactNode }) {
       }) as CSSProperties,
     [accent],
   )
+
+  const adminLabel = admin?.name || admin?.username || admin?.email?.split('@')[0] || 'Admin'
+  const adminSubLabel = admin?.email || 'Authorized admin'
+  const adminInitials = adminLabel
+    .replace(/^@/, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+    .slice(0, 2) || 'AD'
 
   if (!authorized) {
     return (
@@ -150,7 +192,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
         <button
           onClick={() => {
-            localStorage.removeItem(ADMIN_SESSION_KEY)
+            clearAdminSession()
             router.replace('/admin/login')
           }}
           className="mt-10 flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-slate-300 transition-colors hover:border-[#EF4444]/40 hover:text-[#EF4444]"
@@ -212,7 +254,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 aria-label={t('notifications')}
               >
                 <Bell size={16} />
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full" style={{ backgroundColor: accent.a }} />
+                {notificationCount > 0 ? (
+                  <span
+                    className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none text-black"
+                    style={{ backgroundColor: accent.a }}
+                  >
+                    {notificationCount > 9 ? '9+' : notificationCount}
+                  </span>
+                ) : null}
               </button>
 
               <button
@@ -229,8 +278,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 <span className="text-[11px] font-semibold" style={{ color: accent.a }}>{t('adminPanel')}</span>
               </div>
 
+              <div className="hidden text-right lg:block">
+                <p className="text-sm font-semibold text-white">{adminLabel}</p>
+                <p className="text-xs text-slate-400">{adminSubLabel}</p>
+              </div>
+
               <div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-black" style={{ backgroundImage: `linear-gradient(to bottom right, ${accent.a}, ${accent.b})` }}>
-                AD
+                {adminInitials}
               </div>
             </div>
           </div>

@@ -7,24 +7,23 @@ import { AdminLogo } from '@/components/admin/AdminLogo'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation, type TranslationKey } from '@/lib/translations'
 import { BRAND_NAME } from '@/lib/brand'
-
-const ADMIN_SESSION_KEY = 'streamfy-admin-session'
+import { createAdminSession } from '@/lib/users-store'
 
 export default function AdminLoginPage() {
   const router = useRouter()
   const { settings } = useAppSettings()
   const t = (key: TranslationKey) => getTranslation(settings.language, key)
-  const [email, setEmail] = useState('admin@streamfy.com')
-  const [password, setPassword] = useState('admin123')
+  const [email, setEmail] = useState('zaidikwizera@gmail.com')
+  const [password, setPassword] = useState('zaidigram2023')
   const [error, setError] = useState('')
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (email.toLowerCase() !== 'admin@streamfy.com' || password !== 'admin123') {
+    const session = createAdminSession(email, password)
+    if (!session) {
       setError(t('invalidAdminCredentials'))
       return
     }
-    localStorage.setItem(ADMIN_SESSION_KEY, 'active')
     router.replace('/admin')
   }
 

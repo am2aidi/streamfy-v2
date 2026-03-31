@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Heart, UploadCloud } from 'lucide-react'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
@@ -199,6 +200,14 @@ export default function CommunityPage() {
                   <UploadCloud size={16} />
                   Submit upload
                 </button>
+
+                <div className="mt-3 rounded-2xl border border-white/10 bg-black/25 p-4 text-xs text-gray-300">
+                  By submitting, you confirm you own the rights or have permission to share. If someone reports copyright infringement, Streamfy may remove the content to protect the platform.{' '}
+                  <Link href="/legal/copyright" className="text-[color:var(--app-accent-a)] hover:underline">
+                    Learn more
+                  </Link>
+                  .
+                </div>
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
@@ -256,6 +265,7 @@ export default function CommunityPage() {
 
                     <div className="p-4">
                       <p className="text-white text-lg font-bold line-clamp-1">{item.title}</p>
+                      <p className="mt-1 text-xs text-gray-400">{item.createdBy === user?.id ? 'Uploaded by you' : 'Uploaded by member'}</p>
                       <p className="mt-1 text-xs text-gray-400">Avg {stats.avgStars.toFixed(1)} • {stats.ratingCount} ratings • {stats.likeCount} likes</p>
                       {item.description ? <p className="mt-2 text-sm text-gray-300 line-clamp-2">{item.description}</p> : null}
 

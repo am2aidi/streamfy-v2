@@ -14,7 +14,9 @@ export default function AdminCommunityPage() {
   const [status, setStatus] = useState<'all' | CommunityStatus>('all')
 
   const users = useMemo(() => listPublicUsers(), [])
-  const nameFor = (id: string) => users.find((u) => u.id === id)?.name ?? id
+  const userFor = (id: string) => users.find((u) => u.id === id)
+  const nameFor = (id: string) => userFor(id)?.name ?? id
+  const emailFor = (id: string) => userFor(id)?.email ?? ''
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -83,6 +85,7 @@ export default function AdminCommunityPage() {
             <tbody>
               {filtered.map((i) => {
                 const stats = community.statsFor(i.id)
+                const uploaderEmail = emailFor(i.createdBy)
                 return (
                   <tr key={i.id} className="border-t border-white/10">
                     <td className="px-4 py-3 text-white font-medium">{i.title}</td>
@@ -90,10 +93,25 @@ export default function AdminCommunityPage() {
                     <td className="px-4 py-3 text-slate-300">{i.status}</td>
                     <td className="px-4 py-3 text-slate-300">{stats.ratingCount ? `${stats.avgStars.toFixed(1)} (${stats.ratingCount})` : '—'}</td>
                     <td className="px-4 py-3 text-slate-300">{stats.likeCount}</td>
-                    <td className="px-4 py-3 text-slate-300">{nameFor(i.createdBy)}</td>
+                    <td className="px-4 py-3 text-slate-300">
+                      <div className="flex flex-col">
+                        <span>{nameFor(i.createdBy)}</span>
+                        {uploaderEmail ? <span className="text-xs text-slate-400">{uploaderEmail}</span> : null}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-slate-300">{new Date(i.createdAt).toLocaleString()}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        {uploaderEmail ? (
+                          <a
+                            href={`mailto:${encodeURIComponent(uploaderEmail)}?subject=${encodeURIComponent(`${i.title} on Streamfy`)}&body=${encodeURIComponent(
+                              `Hi,\\n\\nWe are contacting you about your upload (“${i.title}”).\\n\\nThanks,\\nStreamfy Admin`,
+                            )}`}
+                            className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-xs text-white hover:bg-white/5"
+                          >
+                            Email
+                          </a>
+                        ) : null}
                         <button
                           onClick={() => setStatusFor(i.id, 'published')}
                           className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/15"

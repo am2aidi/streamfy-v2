@@ -1,5 +1,4 @@
-// Sports teams data with real logos and information
-// Images sourced from free APIs and public resources
+import { getLeagueHeroImage, getTeamArtwork } from '@/lib/sports-media'
 
 export interface Team {
   name: string
@@ -23,58 +22,12 @@ export interface SportsMatch {
   heroImage?: string
 }
 
-// Team logos from TheSportsDB (free API) and Wikimedia Commons
-const TEAM_LOGOS: Record<string, string> = {
-  // Premier League
-  Arsenal: 'https://www.thesportsdb.com/images/media/team/logo/tsr4l51609599131.png',
-  Chelsea: 'https://www.thesportsdb.com/images/media/team/logo/vrxpry1457102402.png',
-  'Man United': 'https://www.thesportsdb.com/images/media/team/logo/rrttqq1442901624.png',
-  Liverpool: 'https://www.thesportsdb.com/images/media/team/logo/qsytwa1457099131.png',
-
-  // La Liga
-  'Barcelona': 'https://www.thesportsdb.com/images/media/team/logo/62f98d1653384124.png',
-  'Atletico': 'https://www.thesportsdb.com/images/media/team/logo/w5hqf41609596852.png',
-  'Real Madrid': 'https://www.thesportsdb.com/images/media/team/logo/i6o0x01609601370.png',
-  'Sevilla': 'https://www.thesportsdb.com/images/media/team/logo/twy4bv1604494913.png',
-
-  // Serie A
-  'AC Milan': 'https://www.thesportsdb.com/images/media/team/logo/oesodo1457102382.png',
-  'Inter': 'https://www.thesportsdb.com/images/media/team/logo/fsdfsddsfdsf1457102413.png',
-  'Juventus': 'https://www.thesportsdb.com/images/media/team/logo/4uewes1457102360.png',
-  'Napoli': 'https://www.thesportsdb.com/images/media/team/logo/4ttqie1604494832.png',
-
-  // Champions League / Bundesliga
-  'Bayern': 'https://www.thesportsdb.com/images/media/team/logo/t43v851609602122.png',
-  'PSG': 'https://www.thesportsdb.com/images/media/team/logo/zus4te1457104370.png',
-  'Man City': 'https://www.thesportsdb.com/images/media/team/logo/xwxypu1457102468.png',
-  'Dortmund': 'https://www.thesportsdb.com/images/media/team/logo/sqt5ew1457102421.png',
-
-  // NBA
-  'Lakers': 'https://www.thesportsdb.com/images/media/team/logo/qvvvvq1467460447.png',
-  'Warriors': 'https://www.thesportsdb.com/images/media/team/logo/5l0awe1467460491.png',
-  'Celtics': 'https://www.thesportsdb.com/images/media/team/logo/ooueww1467460584.png',
-  'Heat': 'https://www.thesportsdb.com/images/media/team/logo/7hbhj1467460495.png',
-  'Nuggets': 'https://www.thesportsdb.com/images/media/team/logo/u36u561467461048.png',
-  'Bucks': 'https://www.thesportsdb.com/images/media/team/logo/4rwwqq1467461112.png',
-}
-
-const LEAGUE_HERO_IMAGES: Record<string, string> = {
-  'Premier League': 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80',
-  'La Liga': 'https://images.unsplash.com/photo-1522869635100-ce306475b3ce?w=800&q=80',
-  'Serie A': 'https://images.unsplash.com/photo-1579952363873-27f3bade9e55?w=800&q=80',
-  'Bundesliga': 'https://images.unsplash.com/photo-1456283591236-e1ad6a4c2d7a?w=800&q=80',
-  'Champions League': 'https://images.unsplash.com/photo-1526232216027-f891400cb1d7?w=800&q=80',
-  'NBA': 'https://images.unsplash.com/photo-1546519638-68711109f78f?w=800&q=80',
-  'Volleyball Nations League': 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&q=80',
-  'FIBA': 'https://images.unsplash.com/photo-1519861531473-9200262188bf?w=800&q=80',
-}
-
 function getTeamLogo(teamName: string): string {
-  return TEAM_LOGOS[teamName] || '/placeholder-logo.png'
+  return getTeamArtwork(teamName)
 }
 
 function getLeagueHero(leagueName: string): string {
-  return LEAGUE_HERO_IMAGES[leagueName] || 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80'
+  return getLeagueHeroImage(leagueName)
 }
 
 export const sportsData = {
@@ -248,14 +201,14 @@ export const sportsData = {
         record: '8-2',
         initial: 'POL',
         color: '#DC2626',
-        logo: '/placeholder-logo.png',
+        logo: getTeamLogo('Poland'),
       },
       team2: {
         name: 'Brazil',
         record: '7-3',
         initial: 'BRA',
         color: '#16A34A',
-        logo: '/placeholder-logo.png',
+        logo: getTeamLogo('Brazil'),
       },
       time: '8:30 PM',
       status: 'upcoming' as const,
@@ -357,14 +310,14 @@ export const sportsData = {
         record: '9-1',
         initial: 'USA',
         color: '#1D4ED8',
-        logo: '/placeholder-logo.png',
+        logo: getTeamLogo('USA'),
       },
       team2: {
         name: 'Spain',
         record: '8-2',
         initial: 'ESP',
         color: '#DC2626',
-        logo: '/placeholder-logo.png',
+        logo: getTeamLogo('Spain'),
       },
       time: 'Mon 7:00 PM',
       status: 'upcoming' as const,
@@ -378,14 +331,14 @@ export const sportsData = {
         record: '7-3',
         initial: 'ITA',
         color: '#16A34A',
-        logo: '/placeholder-logo.svg',
+        logo: getTeamLogo('Italy'),
       },
       team2: {
         name: 'Japan',
         record: '6-4',
         initial: 'JPN',
         color: '#EF4444',
-        logo: '/placeholder-logo.png',
+        logo: getTeamLogo('Japan'),
       },
       time: 'Tue 8:00 PM',
       status: 'upcoming' as const,

@@ -1,20 +1,29 @@
 'use client'
 
+import { useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Info, Music, Share2, Trophy, Tv2, Upload } from 'lucide-react'
+import { Home, Info, LayoutDashboard, Music, Share2, Trophy, Tv2, Upload } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
+import { useAuth } from '@/components/AuthProvider'
 import { StreamfyLogo } from '@/components/StreamfyLogo'
 import { BRAND_NAME } from '@/lib/brand'
 import { getTranslation } from '@/lib/translations'
 import { useToast } from '@/hooks/use-toast'
+import { getUserByEmail, getUserById } from '@/lib/users-store'
 
 export function Sidebar() {
   const pathname = usePathname()
   const { settings } = useAppSettings()
+  const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
+  const isAdminUser = useMemo(() => {
+    if (!isAuthenticated || !user) return false
+    const storedUser = (user.id ? getUserById(user.id) : null) ?? (user.email ? getUserByEmail(user.email) : null)
+    return storedUser?.role === 'admin' && storedUser?.status !== 'blocked'
+  }, [isAuthenticated, user])
 
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href))
 
@@ -51,6 +60,7 @@ export function Sidebar() {
             <NavItemLink href="/movies" label={t('movies')} icon={Tv2} active={isActive('/movies')} />
             <NavItemLink href="/sports" label={t('sports')} icon={Trophy} active={isActive('/sports')} />
             <NavItemLink href="/music" label={t('music')} icon={Music} active={isActive('/music')} />
+            {isAdminUser ? <NavItemLink href="/admin" label="Dashboard" icon={LayoutDashboard} active={isActive('/admin')} /> : null}
             <div className="my-1 h-px w-8 bg-white/10" />
             <NavItemLink href="/upload" label="Upload" icon={Upload} active={isActive('/upload')} />
             <NavItemLink href="/about" label={t('learnMore')} icon={Info} active={isActive('/about')} />
@@ -88,7 +98,11 @@ export function Sidebar() {
         <MobileNavItem href="/movies" label={t('movies')} icon={Tv2} active={isActive('/movies')} />
         <MobileNavItem href="/sports" label={t('sports')} icon={Trophy} active={isActive('/sports')} />
         <MobileNavItem href="/music" label={t('music')} icon={Music} active={isActive('/music')} />
-        <MobileNavItem href="/upload" label="Upload" icon={Upload} active={isActive('/upload')} />
+        {isAdminUser ? (
+          <MobileNavItem href="/admin" label="Dashboard" icon={LayoutDashboard} active={isActive('/admin')} />
+        ) : (
+          <MobileNavItem href="/upload" label="Upload" icon={Upload} active={isActive('/upload')} />
+        )}
         <MobileNavItem href="/about" label={t('learnMore')} icon={Info} active={isActive('/about')} />
       </div>
     </nav>

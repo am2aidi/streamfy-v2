@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import { Calendar, Clock3, Plus, Search, Trophy } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useFilterOptions } from '@/lib/admin-filters'
+import { getLeagueHeroImage, getTeamArtwork } from '@/lib/sports-media'
 
 type SportsRow = {
   sport: 'Football' | 'Basketball' | 'Volleyball'
@@ -69,6 +71,14 @@ function stablePseudoCount(input: string) {
     hash = (hash * 31 + input.charCodeAt(i)) >>> 0
   }
   return (hash % 30) + 5
+}
+
+function getLogoSrc(value: string | undefined, fallbackName: string) {
+  return value?.trim() || getTeamArtwork(fallbackName)
+}
+
+function getHeroSrc(league: string) {
+  return getLeagueHeroImage(league)
 }
 
 export default function AdminSportsPage() {
@@ -165,8 +175,11 @@ export default function AdminSportsPage() {
     const next = {
       ...form,
       teamA: form.teamA.trim(),
+      teamALogo: getLogoSrc(form.teamALogo, form.teamA.trim()),
       teamB: form.teamB.trim(),
+      teamBLogo: getLogoSrc(form.teamBLogo, form.teamB.trim()),
       league: form.league.trim(),
+      leagueLogo: form.leagueLogo?.trim() || getHeroSrc(form.league.trim()),
       stream: form.stream.trim(),
     }
 
@@ -270,10 +283,27 @@ export default function AdminSportsPage() {
                 </div>
               </div>
               <div className="rounded-xl bg-gradient-to-br from-[#f4a30a]/20 to-black p-3">
+                <div className="relative mb-3 h-24 overflow-hidden rounded-xl border border-white/10">
+                  <Image src={featured ? getHeroSrc(featured.league) : '/sports-hero.jpg'} alt={featured?.league ?? 'league hero'} fill className="object-cover opacity-55" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                  <div className="absolute left-3 top-3 rounded-full bg-black/55 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-slate-200">
+                    {featured?.league ?? 'No league'}
+                  </div>
+                </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span>{featured?.teamA ?? '--'}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="relative h-10 w-10 overflow-hidden rounded-full border border-white/15 bg-white/10">
+                      <Image src={featured ? getLogoSrc(featured.teamALogo, featured.teamA) : getTeamArtwork('Team A')} alt={featured?.teamA ?? 'Team A'} fill className="object-contain p-1" unoptimized />
+                    </div>
+                    <span>{featured?.teamA ?? '--'}</span>
+                  </div>
                   <span className="text-slate-400">VS</span>
-                  <span>{featured?.teamB ?? '--'}</span>
+                  <div className="flex items-center gap-2">
+                    <span>{featured?.teamB ?? '--'}</span>
+                    <div className="relative h-10 w-10 overflow-hidden rounded-full border border-white/15 bg-white/10">
+                      <Image src={featured ? getLogoSrc(featured.teamBLogo, featured.teamB) : getTeamArtwork('Team B')} alt={featured?.teamB ?? 'Team B'} fill className="object-contain p-1" unoptimized />
+                    </div>
+                  </div>
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   <div className="rounded-lg bg-black/40 px-2 py-1.5 text-center text-xs">1.50</div>
@@ -317,9 +347,19 @@ export default function AdminSportsPage() {
                       </div>
                     </div>
                     <div className="mt-2 grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2 text-sm">
-                      <span className="truncate">{row.teamA}</span>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="relative h-8 w-8 overflow-hidden rounded-full border border-white/10 bg-white/10">
+                          <Image src={getLogoSrc(row.teamALogo, row.teamA)} alt={row.teamA} fill className="object-contain p-1" unoptimized />
+                        </div>
+                        <span className="truncate">{row.teamA}</span>
+                      </div>
                       <span className="text-slate-500">vs</span>
-                      <span className="truncate">{row.teamB}</span>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate">{row.teamB}</span>
+                        <div className="relative h-8 w-8 overflow-hidden rounded-full border border-white/10 bg-white/10">
+                          <Image src={getLogoSrc(row.teamBLogo, row.teamB)} alt={row.teamB} fill className="object-contain p-1" unoptimized />
+                        </div>
+                      </div>
                       <span className="text-xs text-[#f4a30a]">{row.stream}</span>
                     </div>
                   </div>
@@ -402,6 +442,29 @@ export default function AdminSportsPage() {
                 <option>Finished</option>
               </select>
               <input value={form.stream} onChange={(e) => setForm((p) => ({ ...p, stream: e.target.value }))} placeholder="streamfy.live/..." className="md:col-span-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
+              <div className="md:col-span-2 rounded-2xl border border-white/10 bg-black/25 p-3">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Team Image Preview</p>
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-center">
+                    <div className="relative mx-auto h-16 w-16 overflow-hidden rounded-full border border-white/10 bg-white/10">
+                      <Image src={getLogoSrc(form.teamALogo, form.teamA || 'Team A')} alt={form.teamA || 'Team A'} fill className="object-contain p-1.5" unoptimized />
+                    </div>
+                    <p className="mt-2 text-sm font-medium text-white">{form.teamA || 'Team A'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-center">
+                    <div className="relative mx-auto h-16 w-16 overflow-hidden rounded-full border border-white/10 bg-white/10">
+                      <Image src={getHeroSrc(form.league || 'Champions League')} alt={form.league || 'League'} fill className="object-cover" />
+                    </div>
+                    <p className="mt-2 text-sm font-medium text-white">{form.league || 'League'}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-center">
+                    <div className="relative mx-auto h-16 w-16 overflow-hidden rounded-full border border-white/10 bg-white/10">
+                      <Image src={getLogoSrc(form.teamBLogo, form.teamB || 'Team B')} alt={form.teamB || 'Team B'} fill className="object-contain p-1.5" unoptimized />
+                    </div>
+                    <p className="mt-2 text-sm font-medium text-white">{form.teamB || 'Team B'}</p>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button onClick={() => setOpen(false)} className="rounded-xl border border-white/10 px-4 py-2 text-sm">Cancel</button>

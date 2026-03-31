@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { ArrowUpCircle, Bell, CircleHelp, Download, Gift, Globe, Heart, Info, LogOut, MessageCircle, Moon, Phone, PlaySquare, Settings, Share2, Sun, UserCircle2 } from 'lucide-react'
+import { ArrowUpCircle, Bell, CircleHelp, Download, Gift, Globe, Heart, Info, LayoutDashboard, LogOut, MessageCircle, Moon, Phone, PlaySquare, Settings, Share2, Sun, UserCircle2 } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { getTranslation, languages } from '@/lib/translations'
@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast'
 import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
 import { StreamfyLogo } from '@/components/StreamfyLogo'
 import { BRAND_NAME } from '@/lib/brand'
+import { getUserByEmail, getUserById } from '@/lib/users-store'
 
 export function Header() {
   const router = useRouter()
@@ -24,7 +25,13 @@ export function Header() {
     () => languages.find((l) => l.code === settings.language)?.name ?? 'English',
     [settings.language]
   )
+  const isAdminUser = useMemo(() => {
+    if (!isAuthenticated || !user) return false
+    const storedUser = (user.id ? getUserById(user.id) : null) ?? (user.email ? getUserByEmail(user.email) : null)
+    return storedUser?.role === 'admin' && storedUser?.status !== 'blocked'
+  }, [isAuthenticated, user])
   const showCompactBanner = !['/', '/movies', '/music', '/sports'].includes(pathname)
+  const notificationCount = 3
 
   const sharePage = async () => {
     const url = typeof window !== 'undefined' ? window.location.href : ''
@@ -54,6 +61,20 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-3">
+        {isAdminUser ? (
+          <button
+            onClick={() => router.push('/admin')}
+            className="hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-black shadow-[0_12px_30px_rgba(0,0,0,0.25)] md:inline-flex"
+            style={{
+              background:
+                'linear-gradient(135deg, color-mix(in oklab, var(--app-accent-a) 82%, white), color-mix(in oklab, var(--app-accent-b) 76%, white))',
+            }}
+          >
+            <LayoutDashboard size={16} />
+            Dashboard
+          </button>
+        ) : null}
+
         <select
           value={settings.language}
           onChange={(e) => updateSetting('language', e.target.value as typeof settings.language)}
@@ -114,7 +135,11 @@ export function Header() {
           aria-label={t('notifications')}
         >
           <Bell size={16} />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#f4a30a]" />
+          {notificationCount > 0 ? (
+            <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f4a30a] px-1 text-[10px] font-bold leading-none text-black">
+              {notificationCount > 9 ? '9+' : notificationCount}
+            </span>
+          ) : null}
         </button>
 
         <div className="relative">
@@ -188,6 +213,20 @@ export function Header() {
                   >
                     {t('signUp')}
                   </button>
+                  <div className="my-1 border-t border-white/10" />
+                </>
+              ) : null}
+
+              {isAdminUser ? (
+                <>
+                  <MenuAction
+                    icon={LayoutDashboard}
+                    label="Dashboard"
+                    onClick={() => {
+                      router.push('/admin')
+                      setShowMenu(false)
+                    }}
+                  />
                   <div className="my-1 border-t border-white/10" />
                 </>
               ) : null}

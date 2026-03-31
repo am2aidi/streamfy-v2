@@ -27,7 +27,6 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
   const [typeFilter, setTypeFilter] = useState<'All' | (typeof movieCards)[number]['type']>(defaultType ?? 'All')
   const [yearFilter, setYearFilter] = useState('All')
   const [ratingFilter, setRatingFilter] = useState('All')
-  const [secondaryFilter, setSecondaryFilter] = useState('All genres')
   const [languageFilter, setLanguageFilter] = useState<'All' | Language>('All')
   const [search, setSearch] = useState('')
 
@@ -43,7 +42,6 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
       const matchesType = typeFilter === 'All' || movie.type === typeFilter
       const matchesYear = yearFilter === 'All' || String(movie.year) === yearFilter
       const matchesRating = ratingFilter === 'All' || movie.rating >= Number(ratingFilter)
-      const matchesSecondary = secondaryFilter === 'All genres' || movie.genre === secondaryFilter
       const matchesLanguage = languageFilter === 'All' ? true : movie.language === languageFilter
       const query = search.trim().toLowerCase()
       const matchesSearch =
@@ -51,9 +49,9 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
         movie.title.toLowerCase().includes(query) ||
         movie.description.toLowerCase().includes(query) ||
         movie.genre.toLowerCase().includes(query)
-      return matchesGenre && matchesType && matchesYear && matchesRating && matchesSecondary && matchesLanguage && matchesSearch
+      return matchesGenre && matchesType && matchesYear && matchesRating && matchesLanguage && matchesSearch
     })
-  }, [genreFilter, ratingFilter, search, secondaryFilter, yearFilter, languageFilter, typeFilter])
+  }, [genreFilter, ratingFilter, search, yearFilter, languageFilter, typeFilter])
 
   const featured = filteredMovies.find((movie) => movie.id === 'kylexy') ?? filteredMovies[0] ?? movieCards[0]
   const listMovies = filteredMovies.filter((movie) => movie.id !== featured.id)
@@ -63,7 +61,6 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
     setTypeFilter(defaultType ?? 'All')
     setYearFilter('All')
     setRatingFilter('All')
-    setSecondaryFilter('All genres')
     setLanguageFilter('All')
     setSearch('')
   }
@@ -95,8 +92,8 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
       </div>
 
       <div className="rounded-3xl border border-white/10 bg-[#071325] p-4 md:p-5">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto_auto_auto_auto]">
-          <div className="relative">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-8">
+          <div className="relative lg:col-span-2">
             <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/50" />
             <input
               value={search}
@@ -154,11 +151,11 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
 
           <div className="relative">
             <select
-              value={secondaryFilter}
-              onChange={(e) => setSecondaryFilter(e.target.value)}
+              value={genreFilter}
+              onChange={(e) => setGenreFilter(e.target.value)}
               className="appearance-none rounded-2xl border border-white/15 bg-black/45 px-4 py-3 pr-10 text-sm text-white"
             >
-              <option value="All genres">{t('allGenres')}</option>
+              <option value="All">{t('allGenres')}</option>
               {genres
                 .filter((genre) => genre !== 'All')
                 .map((genre) => (
@@ -192,12 +189,12 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
           </button>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {['All', 'Action', 'Comedy', 'Sci-Fi'].map((chip) => (
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {genres.slice(0, Math.min(genres.length, 8)).map((chip) => (
             <button
               key={chip}
               onClick={() => setGenreFilter(chip)}
-              className={`rounded-full border px-4 py-2 text-sm ${
+              className={`shrink-0 rounded-full border px-4 py-2 text-sm ${
                 genreFilter === chip
                   ? 'border-[#f4a30a] bg-[#f4a30a]/15 text-[#f4a30a]'
                   : 'border-white/15 bg-white/5 text-gray-300'
@@ -257,16 +254,21 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
         </div>
       </article>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 [column-fill:_balance]" style={{ columnGap: '1rem' }}>
         {listMovies.map((movie, i) => (
           <Link
             key={movie.id}
             href={`/movies/${movie.id}`}
-            className="group overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-colors hover:bg-white/10"
+            className="group mb-4 block break-inside-avoid overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-colors hover:bg-white/10"
             aria-label={movie.title}
           >
             <article>
-              <div className="relative h-56">
+              <div
+                className="relative w-full"
+                style={{
+                  aspectRatio: (['2 / 3', '4 / 5', '1 / 1', '16 / 9', '3 / 4'] as const)[i % 5],
+                }}
+              >
                 <Image
                   src={movie.image}
                   alt={movie.title}
@@ -276,7 +278,7 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
                 />
               </div>
               <div className="space-y-2 p-4">
-                <p className="text-lg font-semibold text-white">{movie.title}</p>
+                <p className="text-base font-semibold text-white">{movie.title}</p>
                 <p className="text-xs text-gray-400">
                   S{(i % 3) + 1} | E{(i % 9) + 1} | {movie.year}
                 </p>

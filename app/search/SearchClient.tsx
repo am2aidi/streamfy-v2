@@ -12,7 +12,6 @@ import { getAllMatches } from '@/lib/sports-data'
 import { shortVideos } from '@/lib/shorts-data'
 import { useNewsItems } from '@/hooks/useNewsItems'
 import { useCommunity } from '@/hooks/useCommunity'
-import { listPublicUsers } from '@/lib/users-store'
 
 export function SearchClient() {
   const router = useRouter()
@@ -57,14 +56,7 @@ export function SearchClient() {
       .slice(0, 20)
   }, [communityItems, query])
 
-  const people = useMemo(() => {
-    if (!query) return []
-    return listPublicUsers()
-      .filter((u) => (u.name + ' ' + (u.email ?? '') + ' ' + (u.phone ?? '')).toLowerCase().includes(query))
-      .slice(0, 20)
-  }, [query])
-
-  const hasResults = movies.length + tracks.length + matches.length + shorts.length + news.length + community.length + people.length > 0
+  const hasResults = movies.length + tracks.length + matches.length + shorts.length + news.length + community.length > 0
 
   const submit = () => {
     const next = q.trim()
@@ -80,7 +72,7 @@ export function SearchClient() {
         <main className="px-6 flex flex-col gap-6">
           <div>
             <h1 className="text-white text-3xl font-bold">Search</h1>
-            <p className="text-gray-400 text-sm mt-1">Movies, music, sports, shorts, community, and people.</p>
+            <p className="text-gray-400 text-sm mt-1">Movies, music, sports, shorts, news, and community.</p>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -164,13 +156,6 @@ export function SearchClient() {
                 </ResultSection>
               ) : null}
 
-              {people.length ? (
-                <ResultSection title="People">
-                  {people.map((u) => (
-                    <ResultItem key={u.id} href={`/chat?u=${encodeURIComponent(u.id)}`} title={u.name} meta={u.email || u.phone} />
-                  ))}
-                </ResultSection>
-              ) : null}
             </div>
           )}
         </main>

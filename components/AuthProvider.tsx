@@ -7,6 +7,7 @@ import { useAppSettings } from '@/components/AppSettingsProvider'
 import { StreamfyLogo } from '@/components/StreamfyLogo'
 import { BRAND_NAME } from '@/lib/brand'
 import { getTranslation, type TranslationKey } from '@/lib/translations'
+import { readStoredUsers, writeStoredUsers, type StoredUserRecord } from '@/lib/users-store'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -20,10 +21,6 @@ interface AuthUser {
   provider?: 'email' | 'gmail' | 'facebook' | 'twitter' | 'pro'
 }
 
-interface StoredUser extends AuthUser {
-  password: string
-}
-
 interface AuthContextType {
   user: AuthUser | null
   isAuthenticated: boolean
@@ -35,23 +32,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const STORAGE_USERS_KEY = 'streamfy-users'
 const STORAGE_SESSION_KEY = 'streamfy-auth-session'
-const DEFAULT_DEMO_USER: StoredUser = {
+const DEFAULT_DEMO_USER: StoredUserRecord = {
   id: 'u-demo',
   name: 'Joe Don',
+  username: 'joe_don',
   email: 'joe.don@example.com',
-  avatarUrl: '/profile-avatar.jpg',
   password: 'streamfy123',
   provider: 'email',
+  role: 'user',
+  status: 'active',
+  createdAt: '2026-01-13T00:00:00.000Z',
 }
 
-const DEFAULT_DEMO_USERS: StoredUser[] = [
-  { ...DEFAULT_DEMO_USER, username: 'joe_don' },
-  { id: 'u-alina', name: 'Alina', username: 'alina', email: 'alina@example.com', avatarUrl: '/profile-avatar.jpg', password: 'streamfy123', provider: 'email' },
-  { id: 'u-musa', name: 'Musa', username: 'musa', email: 'musa@example.com', avatarUrl: '/profile-avatar.jpg', password: 'streamfy123', provider: 'email' },
-  { id: 'u-ken', name: 'Ken', username: 'ken', email: 'ken@example.com', avatarUrl: '/profile-avatar.jpg', password: 'streamfy123', provider: 'email' },
-  { id: 'u-support', name: `${BRAND_NAME} Support`, username: 'streamfy_support', email: 'support@streamfy.io', avatarUrl: '/profile-avatar.jpg', password: 'streamfy123', provider: 'email' },
+const DEFAULT_DEMO_USERS: StoredUserRecord[] = [
+  DEFAULT_DEMO_USER,
+  { id: 'u-alina', name: 'Alina', username: 'alina', email: 'alina@example.com', password: 'streamfy123', provider: 'email', role: 'user', status: 'active', createdAt: '2026-02-12T00:00:00.000Z' },
+  { id: 'u-musa', name: 'Musa', username: 'musa', email: 'musa@example.com', password: 'streamfy123', provider: 'email', role: 'user', status: 'active', createdAt: '2026-02-18T00:00:00.000Z' },
+  { id: 'u-ken', name: 'Ken', username: 'ken', email: 'ken@example.com', password: 'streamfy123', provider: 'email', role: 'user', status: 'active', createdAt: '2026-02-22T00:00:00.000Z' },
+  { id: 'u-support', name: `${BRAND_NAME} Support`, username: 'streamfy_support', email: 'support@streamfy.io', password: 'streamfy123', provider: 'email', role: 'user', status: 'active', createdAt: '2026-01-05T00:00:00.000Z' },
 ]
 
 const countryCodes = [
@@ -106,10 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const rawUsers = localStorage.getItem(STORAGE_USERS_KEY)
-      if (!rawUsers) {
-        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(DEFAULT_DEMO_USERS))
-      }
+      readStoredUsers(DEFAULT_DEMO_USERS)
       const rawSession = localStorage.getItem(STORAGE_SESSION_KEY)
       if (rawSession) {
         setUser(JSON.parse(rawSession) as AuthUser)
@@ -166,10 +162,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       pendingActionRef.current = onAuthorized
       setMode('signin')
-      setReason(nextReason ?? t('authRequiredDefault'))
+      setReason(nextReason ?? getTranslation(settings.language, 'authRequiredDefault'))
       setOpen(true)
     },
-    [t, user]
+    [settings.language, user]
   )
 
   const value = useMemo<AuthContextType>(
@@ -241,19 +237,9 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
 
   if (!open) return null
 
-  const readUsers = (): StoredUser[] => {
-    try {
-      const raw = localStorage.getItem(STORAGE_USERS_KEY)
-      return raw ? (JSON.parse(raw) as StoredUser[]) : [DEFAULT_DEMO_USER]
-    } catch {
-      return [DEFAULT_DEMO_USER]
-    }
-  }
+  const readUsers = (): StoredUserRecord[] => readStoredUsers(DEFAULT_DEMO_USERS)
 
-  const writeUsers = (users: StoredUser[]) => {
-    localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users))
-    window.dispatchEvent(new Event('streamfy:users-updated'))
-  }
+  const writeUsers = (users: StoredUserRecord[]) => writeStoredUsers(users)
 
   const normalizeUsername = (raw: string) => raw.trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20)
 
@@ -289,6 +275,10 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
     })
     if (!user) {
       setError(t('authInvalidCredentials'))
+      return
+    }
+    if (user.status === 'blocked') {
+      setError('This account is blocked.')
       return
     }
     onAuthSuccess({
@@ -336,7 +326,7 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
       return
     }
 
-    const newUser: StoredUser = {
+    const newUser: StoredUserRecord = {
       id: `u-${Date.now()}`,
       name: name.trim() || undefined,
       username: normalized,
@@ -344,6 +334,9 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
       phone: fullPhone,
       password: password.trim(),
       provider: 'email',
+      role: 'user',
+      status: 'active',
+      createdAt: new Date().toISOString(),
     }
     writeUsers([...users, newUser])
     onAuthSuccess({
@@ -362,7 +355,17 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
     const email = 'joe.don@example.com'
     const base = email.split('@')[0] ?? 'user'
     const nextUsername = ensureUniqueUsername(base, users)
-    const newUser: StoredUser = { id, email, name: 'Joe Don', username: nextUsername, password: 'oauth', provider: 'gmail' }
+    const newUser: StoredUserRecord = {
+      id,
+      email,
+      name: 'Joe Don',
+      username: nextUsername,
+      password: 'oauth',
+      provider: 'gmail',
+      role: 'user',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+    }
     writeUsers([...users, newUser])
     onAuthSuccess({ id, email, name: newUser.name, username: newUser.username, provider: 'gmail' })
   }

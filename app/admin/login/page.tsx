@@ -7,7 +7,7 @@ import { AdminLogo } from '@/components/admin/AdminLogo'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation, type TranslationKey } from '@/lib/translations'
 import { BRAND_NAME } from '@/lib/brand'
-import { createAdminSession } from '@/lib/users-store'
+import { writeStoredAuthSession, type ClientAuthUser } from '@/lib/auth-client'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -17,13 +17,35 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('zaidigram2023')
   const [error, setError] = useState('')
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const session = createAdminSession(email, password)
-    if (!session) {
+    setError('')
+
+    const res = await fetch('/api/auth/signin', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        identifier: email,
+        password,
+      }),
+    }).catch(() => null)
+
+    if (!res?.ok) {
       setError(t('invalidAdminCredentials'))
       return
     }
+
+    const data = (await res.json()) as { user: ClientAuthUser; sessionToken: string }
+
+    if (data.user.role !== 'admin' || data.user.status !== 'active') {
+      setError(t('invalidAdminCredentials'))
+      return
+    }
+
+    writeStoredAuthSession({
+      token: data.sessionToken,
+      user: data.user,
+    })
     router.replace('/admin')
   }
 

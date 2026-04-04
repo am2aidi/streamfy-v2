@@ -7,21 +7,26 @@ import Image from 'next/image'
 import { ChevronLeft, Heart, Play } from 'lucide-react'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
-import { getTrackById, musicTracks } from '@/lib/music-data'
 import { MusicPlayer } from '@/components/MusicPlayer'
 import { useAuth } from '@/components/AuthProvider'
 import { SocialShareLinks } from '@/components/SocialShareLinks'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation } from '@/lib/translations'
+import { useTracks } from '@/hooks/useTracks'
 
 export default function MusicDetailPage() {
   const params = useParams<{ id: string }>()
-  const track = useMemo(() => getTrackById(params.id), [params.id])
+  const { items: tracks, loaded } = useTracks()
+  const track = useMemo(() => tracks.find((item) => item.id === params.id) ?? null, [params.id, tracks])
   const { requireAuth } = useAuth()
   const { settings, updateSetting } = useAppSettings()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const inWatchlist = track ? settings.watchlistTracks.includes(track.id) : false
   const [lyricsExpanded, setLyricsExpanded] = useState(false)
+
+  if (!track && !loaded) {
+    return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading track...</div>
+  }
 
   if (!track) {
     return (
@@ -98,7 +103,7 @@ export default function MusicDetailPage() {
           <section>
             <h2 className="text-white text-xl font-bold mb-3">{t('playlistTitle')}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {musicTracks.map((song) => (
+              {tracks.map((song) => (
                 <Link key={song.id} href={`/music/${song.id}`} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 hover:bg-white/10">
                   <p className="text-white text-sm font-medium">{song.title}</p>
                   <p className="text-gray-400 text-xs">{song.artist} • {song.duration}</p>

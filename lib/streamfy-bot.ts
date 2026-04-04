@@ -1,3 +1,5 @@
+'use client'
+
 import { BRAND_NAME } from '@/lib/brand'
 
 export type BotQuickReply = { id: string; label: string; text: string }
@@ -27,34 +29,34 @@ const defaultFaq: BotFaqEntry[] = [
     id: 'greeting',
     title: 'Greeting',
     keywords: ['hi', 'hello', 'hey'],
-    responseText: `Hi! I’m ${BRAND_NAME} Bot. I can help with downloads, watchlist, sharing, plans, and reporting issues.`,
+    responseText: `Hi! I'm ${BRAND_NAME} Bot. I can help with downloads, watchlist, sharing, plans, and reporting issues.`,
   },
   {
     id: 'download',
     title: 'Download',
     keywords: ['download', 'downloader', 'save video'],
     responseText:
-      "To download:\n1) Open a movie.\n2) Tap Download.\n3) Pick quality + subtitles.\n\nNote: only download content you have the rights to share.",
+      'To download:\n1) Open a movie.\n2) Tap Download.\n3) Pick quality + subtitles.\n\nNote: only download content you have the rights to share.',
   },
   {
     id: 'watchlist',
     title: 'Watchlist',
     keywords: ['watchlist', 'watch later', 'saved'],
     responseText:
-      "Watchlist:\n- Tap the heart / Watch Later button on movies or shorts.\n- Open Watchlist from the sidebar to see everything you saved.",
+      'Watchlist:\n- Tap the heart / Watch Later button on movies or shorts.\n- Open Watchlist from the sidebar to see everything you saved.',
   },
   {
     id: 'report',
     title: 'Report',
     keywords: ['report', 'problem', 'bug', 'issue', 'not working', 'error'],
     responseText:
-      "Please include:\n- What page you were on\n- What you clicked\n- What you expected\n- What happened instead\n- Your device/browser\n\nYou can also post it in the Feedback Room so admins can review it.",
+      'Please include:\n- What page you were on\n- What you clicked\n- What you expected\n- What happened instead\n- Your device/browser\n\nYou can also post it in the Feedback Room so admins can review it.',
   },
   {
     id: 'plans',
     title: 'Plans',
     keywords: ['plan', 'price', 'subscription', 'pay'],
-    responseText: "Plans are in Settings → Subscription.\nTip: pick Day/Week/Month depending on how often you watch.",
+    responseText: 'Plans are in Settings -> Subscription.\nTip: pick Day/Week/Month depending on how often you watch.',
   },
   {
     id: 'share',
@@ -67,7 +69,7 @@ const defaultFaq: BotFaqEntry[] = [
     id: 'rules',
     title: 'Rules',
     keywords: ['rule', 'rules', 'ban', 'abuse'],
-    responseText: `Chat rules:\n- Be respectful.\n- Don’t spam.\n- Only share ${BRAND_NAME} internal links.\nMessages auto-delete after 2 weeks.`,
+    responseText: `Chat rules:\n- Be respectful.\n- Don't spam.\n- Only share ${BRAND_NAME} internal links.\nMessages auto-delete after 30 days.`,
   },
 ]
 
@@ -106,5 +108,5 @@ export function getBotReply(userText: string): BotResponse | null {
       return { text: entry.responseText, quickReplies }
     }
   }
-  return { text: "I didn’t catch that. Try: download, watchlist, share, plans, or report.", quickReplies }
+  return { text: "I didn't catch that. Try: download, watchlist, share, plans, or report.", quickReplies }
 }

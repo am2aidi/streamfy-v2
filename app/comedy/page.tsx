@@ -5,12 +5,13 @@ import { Heart } from 'lucide-react'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { useAppSettings } from '@/components/AppSettingsProvider'
-import { shortVideos } from '@/lib/shorts-data'
 import { ShortPreviewCard } from '@/components/shorts/ShortPreviewCard'
+import { useShorts } from '@/hooks/useShorts'
 
 export default function ComedyPage() {
   const { settings, updateSetting } = useAppSettings()
-  const items = shortVideos.filter((s) => s.category === 'comedy')
+  const { items: shorts } = useShorts()
+  const items = shorts.filter((s) => s.category === 'comedy')
 
   return (
     <div className="flex min-h-screen bg-black">

@@ -1,9 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import { Plus, Save, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { shortVideos, type ShortsCategory } from '@/lib/shorts-data'
+import type { ShortsCategory } from '@/lib/shorts-data'
+import { fileToDataUrl, isStoredImageSource, summarizeStoredAsset } from '@/lib/file-data-url'
 
 type Row = {
   id: string
@@ -16,7 +18,7 @@ type Row = {
 
 export default function AdminShortsPage() {
   const { toast } = useToast()
-  const [rows, setRows] = useState<Row[]>(shortVideos)
+  const [rows, setRows] = useState<Row[]>([])
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<'all' | ShortsCategory>('all')
 
@@ -27,6 +29,17 @@ export default function AdminShortsPage() {
     image: '',
     caption: '',
   })
+
+  const refreshRows = async () => {
+    const res = await fetch('/api/shorts', { cache: 'no-store' })
+    if (!res.ok) throw new Error('Failed to refresh shorts')
+    const data = (await res.json()) as { items: Row[] }
+    setRows(data.items)
+  }
+
+  useEffect(() => {
+    void refreshRows().catch(() => {})
+  }, [])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -39,34 +52,49 @@ export default function AdminShortsPage() {
 
   const startNew = () => setForm({ title: '', category: 'movies', durationSeconds: 20, image: '', caption: '' })
 
-  const save = () => {
+  const save = async () => {
     if (!form.title.trim()) {
       toast({ title: 'Missing title', description: 'Short title is required.' })
       return
     }
-    const nextRow: Row = {
-      id: form.id ?? `short-${Date.now()}`,
+
+    const nextRow = {
+      ...(form.id ? { id: form.id } : {}),
       title: form.title.trim(),
       category: form.category,
       durationSeconds: Math.max(1, Math.min(59, Number(form.durationSeconds) || 20)),
       image: form.image.trim() || '/placeholder.jpg',
-      caption: form.caption.trim() || 'Short clip (prototype).',
+      caption: form.caption.trim() || 'Short clip ready to publish.',
     }
-    setRows((prev) => {
-      const idx = prev.findIndex((x) => x.id === nextRow.id)
-      if (idx === -1) return [nextRow, ...prev]
-      return prev.map((x) => (x.id === nextRow.id ? nextRow : x))
+
+    await fetch('/api/shorts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(nextRow),
     })
+    await refreshRows()
     toast({ title: form.id ? 'Short updated' : 'Short created', description: nextRow.title })
     startNew()
   }
 
   const edit = (row: Row) => setForm({ ...row })
 
-  const remove = (id: string) => {
-    setRows((prev) => prev.filter((x) => x.id !== id))
+  const remove = async (id: string) => {
+    await fetch(`/api/shorts/${id}`, { method: 'DELETE' })
+    await refreshRows()
     toast({ title: 'Deleted', description: 'Short removed.' })
     if (form.id === id) startNew()
+  }
+
+  const saveImageFile = async (file: File | null) => {
+    if (!file) return
+    try {
+      const dataUrl = await fileToDataUrl(file)
+      setForm((prev) => ({ ...prev, image: dataUrl }))
+      toast({ title: 'Image saved', description: `${file.name} will be stored in the database.` })
+    } catch {
+      toast({ title: 'Upload failed', description: 'We could not read that image file.' })
+    }
   }
 
   return (
@@ -177,9 +205,19 @@ export default function AdminShortsPage() {
             <input
               value={form.image}
               onChange={(e) => setForm((p) => ({ ...p, image: e.target.value }))}
-              placeholder="Image URL"
+              placeholder="Image URL or use the upload below"
               className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none"
             />
+            <div className="rounded-xl border border-dashed border-white/20 bg-black/20 px-3 py-4 text-xs text-slate-300">
+              <span>Upload short image</span>
+              <input type="file" accept="image/*" className="mt-2 block text-xs" onChange={(e) => void saveImageFile(e.target.files?.[0] ?? null)} />
+              <p className="mt-2 text-[11px] text-slate-400">{summarizeStoredAsset(form.image, 'No image selected')}</p>
+              {isStoredImageSource(form.image) ? (
+                <div className="relative mt-3 h-32 overflow-hidden rounded-xl border border-white/10">
+                  <Image src={form.image} alt="Short image preview" fill className="object-cover" unoptimized />
+                </div>
+              ) : null}
+            </div>
             <textarea
               value={form.caption}
               onChange={(e) => setForm((p) => ({ ...p, caption: e.target.value }))}

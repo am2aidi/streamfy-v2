@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /**
  * Workaround for environments where Node IPC (stdio: 'ipc') is blocked.
  * Next's `next dev` CLI uses `child_process.fork()` which requires IPC.

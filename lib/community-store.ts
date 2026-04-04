@@ -12,6 +12,8 @@ export interface CommunityItem {
   trailerUrl?: string
   createdAt: string
   createdBy: string
+  createdByName?: string
+  createdByEmail?: string
   status: CommunityStatus
 }
 

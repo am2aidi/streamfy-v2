@@ -5,22 +5,27 @@ import { useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
-import { getMatchById } from '@/lib/sports-data'
 import { ChevronLeft, Heart, Trophy } from 'lucide-react'
 import Image from 'next/image'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { useToast } from '@/hooks/use-toast'
 import { SocialShareLinks } from '@/components/SocialShareLinks'
 import { getTranslation } from '@/lib/translations'
+import { useSportsMatches } from '@/hooks/useSportsMatches'
 
 export default function MatchDetailPage() {
   const params = useParams<{ id: string }>()
   const [simTick, setSimTick] = useState(0)
-  const match = useMemo(() => getMatchById(params.id), [params.id])
+  const { items, loaded } = useSportsMatches()
+  const match = useMemo(() => items.find((item) => item.id === params.id) ?? null, [items, params.id])
   const { settings, updateSetting } = useAppSettings()
   const { toast } = useToast()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const inWatchlist = match ? settings.watchlistMatches.includes(match.id) : false
+
+  if (!match && !loaded) {
+    return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading match...</div>
+  }
 
   if (!match) {
     return (

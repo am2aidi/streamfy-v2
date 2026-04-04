@@ -13,13 +13,11 @@ import { getRoomThreadId } from '@/lib/chat-store'
 import { internalizeLinks, isTextAllowed } from '@/lib/link-guard'
 import { getTranslation } from '@/lib/translations'
 
-const ROOM_ID = 'feedback'
-
-const ROOMS = [{ id: ROOM_ID, name: 'Feedback Room', description: 'Share ideas, report issues, and request features.' }] as const
+const ROOM_ID = 'room-feedback'
 
 export function ChatClient() {
   const { user, isAuthenticated, openSignIn } = useAuth()
-  const { messages, sendRoom } = useChat()
+  const { messages, rooms, sendRoom, loaded } = useChat(ROOM_ID)
   const { settings } = useAppSettings()
   const { toast } = useToast()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
@@ -28,7 +26,16 @@ export function ChatClient() {
 
   const me = user?.id ?? ''
 
-  const roomThreadId = useMemo(() => (me ? getRoomThreadId(ROOM_ID) : ''), [me])
+  const currentRoom = rooms.find((room) => room.id === ROOM_ID) ?? {
+    id: ROOM_ID,
+    slug: 'feedback',
+    name: 'Feedback Room',
+    description: 'Share ideas, report issues, and request features.',
+    isAnonymous: true,
+    retentionDays: 30,
+  }
+
+  const roomThreadId = useMemo(() => getRoomThreadId(currentRoom.slug), [currentRoom.slug])
 
   const roomMessages = useMemo(() => {
     if (!roomThreadId) return []
@@ -49,7 +56,7 @@ export function ChatClient() {
       return
     }
 
-    sendRoom(ROOM_ID, me, trimmed)
+    void sendRoom(ROOM_ID, me, trimmed)
     setText('')
   }
 
@@ -62,7 +69,7 @@ export function ChatClient() {
         <main className="px-6">
           <div className="mb-5">
             <h1 className="text-white text-3xl font-bold">{t('chat')}</h1>
-            <p className="text-gray-400 text-sm mt-1">Messages auto-delete after 2 weeks.</p>
+            <p className="text-gray-400 text-sm mt-1">Messages auto-delete after 30 days.</p>
           </div>
 
           {!isAuthenticated ? (
@@ -82,7 +89,7 @@ export function ChatClient() {
                 <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
                   <p className="text-xs uppercase tracking-[0.22em] text-white/45">Rooms</p>
                   <div className="mt-2 space-y-2">
-                    {ROOMS.map((r) => {
+                    {(rooms.length ? rooms : [currentRoom]).map((r) => {
                       const activeRoom = r.id === ROOM_ID
                       return (
                         <button
@@ -106,14 +113,14 @@ export function ChatClient() {
                 <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4">
                   <p className="text-sm font-semibold text-white">Anonymous group chat</p>
                   <p className="mt-1 text-xs text-gray-300">Users can&apos;t see other users. Only messages are shown.</p>
-                  <p className="mt-2 text-xs text-gray-400">Use this for feedback and sharing ideas.</p>
+                  <p className="mt-2 text-xs text-gray-400">Use this for feedback and sharing ideas. Messages stay for 30 days.</p>
                 </div>
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
                 <div className="mb-3 rounded-2xl border border-white/10 bg-black/25 px-4 py-3">
-                  <p className="text-white font-semibold">{ROOMS[0]?.name ?? 'Room'}</p>
-                  <p className="text-xs text-gray-400">{ROOMS[0]?.description ?? ''}</p>
+                  <p className="text-white font-semibold">{currentRoom.name}</p>
+                  <p className="text-xs text-gray-400">{currentRoom.description}</p>
                   <p className="mt-2 text-xs text-gray-300">Group chat for feedback. Keep it respectful.</p>
                 </div>
 
@@ -135,7 +142,8 @@ export function ChatClient() {
                           </div>
                         )
                       })}
-                      {roomMessages.length === 0 ? <p className="text-sm text-gray-400">No messages yet. Say hi.</p> : null}
+                      {!loaded ? <p className="text-sm text-gray-400">Loading messages...</p> : null}
+                      {loaded && roomMessages.length === 0 ? <p className="text-sm text-gray-400">No messages yet. Say hi.</p> : null}
                     </div>
                   </div>
 
@@ -169,4 +177,3 @@ export function ChatClient() {
     </div>
   )
 }
-

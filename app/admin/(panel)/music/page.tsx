@@ -1,11 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { Play } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useFilterOptions } from '@/lib/admin-filters'
+import { fileToDataUrl, isStoredImageSource, summarizeStoredAsset } from '@/lib/file-data-url'
 
 type MusicRow = {
+  id?: string
   title: string
   artist: string
   genre: string
@@ -14,16 +17,10 @@ type MusicRow = {
   status: 'Active' | 'Draft'
 }
 
-const initialRows: MusicRow[] = [
-  { title: 'Neon Drive', artist: 'Ari Vox', genre: 'Synthwave', duration: '3:24', cover: '', status: 'Active' },
-  { title: 'Golden Pulse', artist: 'Mika Y', genre: 'Pop', duration: '2:56', cover: '', status: 'Draft' },
-  { title: 'Crowd Roar', artist: 'DJ Volt', genre: 'EDM', duration: '4:12', cover: '', status: 'Active' },
-]
-
 export default function AdminMusicPage() {
   const { toast } = useToast()
   const genreOptions = useFilterOptions('music')
-  const [rows, setRows] = useState<MusicRow[]>(initialRows)
+  const [rows, setRows] = useState<MusicRow[]>([])
   const [query, setQuery] = useState('')
   const [editIndex, setEditIndex] = useState<number | null>(null)
   const [open, setOpen] = useState(false)
@@ -35,6 +32,17 @@ export default function AdminMusicPage() {
     cover: '',
     status: 'Active',
   })
+
+  const refreshRows = async () => {
+    const res = await fetch('/api/tracks?admin=1', { cache: 'no-store' })
+    if (!res.ok) throw new Error('Failed to refresh tracks')
+    const data = (await res.json()) as { items: MusicRow[] }
+    setRows(data.items)
+  }
+
+  useEffect(() => {
+    void refreshRows().catch(() => {})
+  }, [])
 
   const openAdd = (kind: 'song' | 'album' | 'artist') => {
     setEditIndex(null)
@@ -48,25 +56,45 @@ export default function AdminMusicPage() {
     setOpen(true)
   }
 
-  const save = () => {
+  const save = async () => {
     if (!form.title.trim()) {
       toast({ title: 'Missing title', description: 'Song title is required.' })
       return
     }
-    if (editIndex === null) {
-      setRows((prev) => [{ ...form, title: form.title.trim() }, ...prev])
-      toast({ title: 'Added', description: `${form.title} was added.` })
-    } else {
-      setRows((prev) => prev.map((row, idx) => (idx === editIndex ? { ...form, title: form.title.trim() } : row)))
-      toast({ title: 'Updated', description: `${form.title} was updated.` })
+
+    const payload = {
+      ...(form.id ? { id: form.id } : {}),
+      ...form,
+      title: form.title.trim(),
     }
+
+    await fetch('/api/tracks', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    await refreshRows()
+    toast({ title: editIndex === null ? 'Added' : 'Updated', description: `${form.title} was ${editIndex === null ? 'added' : 'updated'}.` })
     setOpen(false)
   }
 
-  const remove = (idx: number) => {
+  const remove = async (idx: number) => {
     const name = rows[idx].title
-    setRows((prev) => prev.filter((_, i) => i !== idx))
+    const id = rows[idx].id
+    if (id) await fetch(`/api/tracks/${id}`, { method: 'DELETE' })
+    await refreshRows()
     toast({ title: 'Deleted', description: `${name} removed.` })
+  }
+
+  const saveCoverFile = async (file: File | null) => {
+    if (!file) return
+    try {
+      const dataUrl = await fileToDataUrl(file)
+      setForm((prev) => ({ ...prev, cover: dataUrl }))
+      toast({ title: 'Cover saved', description: `${file.name} will be stored in the database.` })
+    } catch {
+      toast({ title: 'Upload failed', description: 'We could not read that image file.' })
+    }
   }
 
   return (
@@ -106,11 +134,13 @@ export default function AdminMusicPage() {
                   const q = query.trim().toLowerCase()
                   return !q || [row.title, row.artist, row.genre, row.status].join(' ').toLowerCase().includes(q)
                 })
-                .map((row, idx) => (
-                <tr key={`${row.title}-${idx}`} className="border-t border-white/10">
+                .map((row, idx) => {
+                const rowIndex = rows.findIndex((item) => item.id === row.id)
+                return (
+                <tr key={row.id ?? `${row.title}-${idx}`} className="border-t border-white/10">
                   <td className="px-4 py-3">
                     {row.cover ? (
-                      <img src={row.cover} alt={`${row.title} cover`} className="h-10 w-10 rounded-lg object-cover" />
+                      <Image src={row.cover} alt={`${row.title} cover`} width={40} height={40} className="h-10 w-10 rounded-lg object-cover" unoptimized />
                     ) : (
                       <div className="h-10 w-10 rounded-lg" style={{ background: 'linear-gradient(to bottom right, color-mix(in oklab, var(--admin-accent-a) 40%, transparent), color-mix(in oklab, var(--admin-accent-b) 25%, transparent))' }} />
                     )}
@@ -140,17 +170,17 @@ export default function AdminMusicPage() {
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button
-                        onClick={() => openEdit(idx)}
+                        onClick={() => openEdit(rowIndex)}
                         className="rounded-lg border px-2.5 py-1 text-xs"
                         style={{ borderColor: 'color-mix(in oklab, var(--admin-accent-a) 40%, transparent)', background: 'color-mix(in oklab, var(--admin-accent-a) 10%, transparent)', color: 'var(--admin-accent-a)' }}
                       >
                         Edit
                       </button>
-                      <button onClick={() => remove(idx)} className="rounded-lg border border-[#EF4444]/40 bg-[#EF4444]/10 px-2.5 py-1 text-xs text-[#fca5a5]">Delete</button>
+                      <button onClick={() => remove(rowIndex)} className="rounded-lg border border-[#EF4444]/40 bg-[#EF4444]/10 px-2.5 py-1 text-xs text-[#fca5a5]">Delete</button>
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
@@ -169,7 +199,17 @@ export default function AdminMusicPage() {
                 ))}
               </select>
               <input value={form.duration} onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))} placeholder="3:00" className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
-              <input value={form.cover ?? ''} onChange={(e) => setForm((p) => ({ ...p, cover: e.target.value }))} placeholder="Cover URL (optional)" className="md:col-span-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
+              <input value={form.cover ?? ''} onChange={(e) => setForm((p) => ({ ...p, cover: e.target.value }))} placeholder="Cover URL or use the upload below" className="md:col-span-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
+              <div className="md:col-span-2 rounded-xl border border-dashed border-white/20 bg-black/20 px-3 py-4 text-xs text-slate-300">
+                <span>Upload cover image</span>
+                <input type="file" accept="image/*" className="mt-2 block text-xs" onChange={(e) => void saveCoverFile(e.target.files?.[0] ?? null)} />
+                <p className="mt-2 text-[11px] text-slate-400">{summarizeStoredAsset(form.cover, 'No cover selected')}</p>
+                {isStoredImageSource(form.cover) ? (
+                  <div className="relative mt-3 h-32 overflow-hidden rounded-xl border border-white/10">
+                    <Image src={form.cover!} alt="Cover preview" fill className="object-cover" unoptimized />
+                  </div>
+                ) : null}
+              </div>
               <label className="md:col-span-2 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm">
                 <input type="checkbox" checked={form.status === 'Active'} onChange={(e) => setForm((p) => ({ ...p, status: e.target.checked ? 'Active' : 'Draft' }))} className="accent-[var(--admin-accent-a)]" />
                 Active

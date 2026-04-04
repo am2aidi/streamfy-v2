@@ -25,16 +25,9 @@ import {
 import { AdminLogo } from '@/components/admin/AdminLogo'
 import { useToast } from '@/hooks/use-toast'
 import { useAppSettings } from '@/components/AppSettingsProvider'
+import { useAuth } from '@/components/AuthProvider'
 import { getTranslation, languages, type TranslationKey } from '@/lib/translations'
-import {
-  clearAdminSession,
-  createAdminSessionFromUserId,
-  getAdminSession,
-  getSessionUserId,
-  subscribeToAdminSession,
-  subscribeToUsers,
-  type AdminSession,
-} from '@/lib/users-store'
+import { clearStoredAuthSession } from '@/lib/auth-client'
 
 type AdminNavItem = { href: string; labelKey: TranslationKey; icon: typeof BarChart3 }
 
@@ -59,8 +52,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const { toast } = useToast()
   const { settings, updateSetting } = useAppSettings()
+  const { user, ready, logout } = useAuth()
   const [authorized, setAuthorized] = useState(false)
-  const [admin, setAdmin] = useState<AdminSession | null>(null)
   const t = (key: TranslationKey) => getTranslation(settings.language, key)
   const notificationCount = 3
 
@@ -84,35 +77,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    const syncAdmin = () => {
-      const existing = getAdminSession()
-      if (existing) {
-        setAdmin(existing)
-        setAuthorized(true)
-        return
-      }
+    if (!ready) return
 
-      const authUserId = getSessionUserId()
-      const elevated = createAdminSessionFromUserId(authUserId)
-      if (elevated) {
-        setAdmin(elevated)
-        setAuthorized(true)
-        return
-      }
-
-      setAdmin(null)
-      setAuthorized(false)
+    const isAdmin = Boolean(user?.role === 'admin' && user?.status === 'active')
+    setAuthorized(isAdmin)
+    if (!isAdmin) {
       router.replace('/admin/login')
     }
-
-    syncAdmin()
-    const stopUsers = subscribeToUsers(syncAdmin)
-    const stopAdmin = subscribeToAdminSession(syncAdmin)
-    return () => {
-      stopUsers()
-      stopAdmin()
-    }
-  }, [router])
+  }, [ready, router, user])
 
   const activeLabel = useMemo(() => {
     const active = navItems.find((item) => (item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href)))
@@ -133,8 +105,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
     [accent],
   )
 
-  const adminLabel = admin?.name || admin?.username || admin?.email?.split('@')[0] || 'Admin'
-  const adminSubLabel = admin?.email || 'Authorized admin'
+  const adminLabel = user?.name || user?.username || user?.email?.split('@')[0] || 'Admin'
+  const adminSubLabel = user?.email || 'Authorized admin'
   const adminInitials = adminLabel
     .replace(/^@/, '')
     .split(/\s+/)
@@ -144,7 +116,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     .join('')
     .slice(0, 2) || 'AD'
 
-  if (!authorized) {
+  if (!ready || !authorized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#020617] via-[#0f172a] to-black text-white">
         <div className="flex min-h-screen items-center justify-center">
@@ -192,7 +164,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
         <button
           onClick={() => {
-            clearAdminSession()
+            void logout()
+            clearStoredAuthSession()
             router.replace('/admin/login')
           }}
           className="mt-10 flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-slate-300 transition-colors hover:border-[#EF4444]/40 hover:text-[#EF4444]"

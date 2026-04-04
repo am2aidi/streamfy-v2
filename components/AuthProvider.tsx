@@ -6,24 +6,24 @@ import { Eye, EyeOff, Lock, Mail, UserPlus, X } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { StreamfyLogo } from '@/components/StreamfyLogo'
 import { BRAND_NAME } from '@/lib/brand'
+import {
+  authHeaders,
+  clearStoredAuthSession,
+  readStoredAuthSession,
+  subscribeToAuthSession,
+  writeStoredAuthSession,
+  type ClientAuthUser,
+} from '@/lib/auth-client'
 import { getTranslation, type TranslationKey } from '@/lib/translations'
-import { readStoredUsers, writeStoredUsers, type StoredUserRecord } from '@/lib/users-store'
 
 type AuthMode = 'signin' | 'signup'
 
-interface AuthUser {
-  id: string
-  name?: string
-  username?: string
-  email?: string
-  phone?: string
-  avatarUrl?: string
-  provider?: 'email' | 'gmail' | 'facebook' | 'twitter' | 'pro'
-}
+type AuthUser = ClientAuthUser
 
 interface AuthContextType {
   user: AuthUser | null
   isAuthenticated: boolean
+  ready: boolean
   openSignIn: (reason?: string) => void
   openSignUp: (reason?: string) => void
   logout: () => void
@@ -31,27 +31,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-const STORAGE_SESSION_KEY = 'streamfy-auth-session'
-const DEFAULT_DEMO_USER: StoredUserRecord = {
-  id: 'u-demo',
-  name: 'Joe Don',
-  username: 'joe_don',
-  email: 'joe.don@example.com',
-  password: 'streamfy123',
-  provider: 'email',
-  role: 'user',
-  status: 'active',
-  createdAt: '2026-01-13T00:00:00.000Z',
-}
-
-const DEFAULT_DEMO_USERS: StoredUserRecord[] = [
-  DEFAULT_DEMO_USER,
-  { id: 'u-alina', name: 'Alina', username: 'alina', email: 'alina@example.com', password: 'streamfy123', provider: 'email', role: 'user', status: 'active', createdAt: '2026-02-12T00:00:00.000Z' },
-  { id: 'u-musa', name: 'Musa', username: 'musa', email: 'musa@example.com', password: 'streamfy123', provider: 'email', role: 'user', status: 'active', createdAt: '2026-02-18T00:00:00.000Z' },
-  { id: 'u-ken', name: 'Ken', username: 'ken', email: 'ken@example.com', password: 'streamfy123', provider: 'email', role: 'user', status: 'active', createdAt: '2026-02-22T00:00:00.000Z' },
-  { id: 'u-support', name: `${BRAND_NAME} Support`, username: 'streamfy_support', email: 'support@streamfy.io', password: 'streamfy123', provider: 'email', role: 'user', status: 'active', createdAt: '2026-01-05T00:00:00.000Z' },
-]
 
 const countryCodes = [
   { code: '+250', label: 'Rwanda', flag: '🇷🇼' },
@@ -95,7 +74,6 @@ const authBackdropPosters = [
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { settings } = useAppSettings()
-  const t = (key: TranslationKey) => getTranslation(settings.language, key)
   const [user, setUser] = useState<AuthUser | null>(null)
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<AuthMode>('signin')
@@ -104,32 +82,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    try {
-      readStoredUsers(DEFAULT_DEMO_USERS)
-      const rawSession = localStorage.getItem(STORAGE_SESSION_KEY)
-      if (rawSession) {
-        setUser(JSON.parse(rawSession) as AuthUser)
-      } else if (localStorage.getItem('streamfy-session') === 'active') {
-        const compatUser: AuthUser = {
-          id: 'u-compat',
-          email: 'joe.don@example.com',
-          provider: 'email',
+    let cancelled = false
+
+    const syncSession = async () => {
+      const stored = readStoredAuthSession()
+      if (!stored?.token) {
+        if (!cancelled) {
+          setUser(null)
+          setReady(true)
         }
-        setUser(compatUser)
-        localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(compatUser))
+        return
       }
-    } catch {
-      // ignore malformed local storage
-    } finally {
-      setReady(true)
+
+      try {
+        const res = await fetch('/api/auth/session', {
+          cache: 'no-store',
+          headers: {
+            ...authHeaders(),
+          },
+        })
+
+        if (!res.ok) {
+          clearStoredAuthSession()
+          if (!cancelled) setUser(null)
+          return
+        }
+
+        const data = (await res.json()) as { user: AuthUser }
+        writeStoredAuthSession({ token: stored.token, user: data.user })
+        if (!cancelled) setUser(data.user)
+      } catch {
+        if (!cancelled) setUser(stored.user)
+      } finally {
+        if (!cancelled) setReady(true)
+      }
+    }
+
+    void syncSession()
+    const stop = subscribeToAuthSession(() => {
+      const next = readStoredAuthSession()
+      setUser(next?.user ?? null)
+    })
+
+    return () => {
+      cancelled = true
+      stop()
     }
   }, [])
 
-  const commitAuth = useCallback((next: AuthUser) => {
+  const commitAuth = useCallback((next: AuthUser, sessionToken: string) => {
     setUser(next)
-    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(next))
-    localStorage.setItem('streamfy-session', 'active')
-    window.dispatchEvent(new Event('streamfy:users-updated'))
+    writeStoredAuthSession({ token: sessionToken, user: next })
     setOpen(false)
     const pending = pendingActionRef.current
     pendingActionRef.current = null
@@ -149,9 +152,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(() => {
+    const token = readStoredAuthSession()?.token
+    if (token) {
+      void (async () => {
+        try {
+          await fetch('/api/auth/session', {
+            method: 'DELETE',
+            headers: {
+              ...authHeaders(),
+            },
+          })
+        } catch {
+          // ignore logout network errors
+        }
+      })()
+    }
     setUser(null)
-    localStorage.removeItem(STORAGE_SESSION_KEY)
-    localStorage.removeItem('streamfy-session')
+    clearStoredAuthSession()
   }, [])
 
   const requireAuth = useCallback(
@@ -172,12 +189,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       isAuthenticated: Boolean(user),
+      ready,
       openSignIn,
       openSignUp,
       logout,
       requireAuth,
     }),
-    [logout, openSignIn, openSignUp, requireAuth, user]
+    [logout, openSignIn, openSignUp, ready, requireAuth, user]
   )
 
   return (
@@ -203,7 +221,7 @@ interface AuthModalProps {
   reason: string
   onClose: () => void
   onModeChange: (mode: AuthMode) => void
-  onAuthSuccess: (user: AuthUser) => void
+  onAuthSuccess: (user: AuthUser, sessionToken: string) => void
 }
 
 function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }: AuthModalProps) {
@@ -237,23 +255,9 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
 
   if (!open) return null
 
-  const readUsers = (): StoredUserRecord[] => readStoredUsers(DEFAULT_DEMO_USERS)
-
-  const writeUsers = (users: StoredUserRecord[]) => writeStoredUsers(users)
-
   const normalizeUsername = (raw: string) => raw.trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20)
 
-  const ensureUniqueUsername = (candidate: string, users: StoredUser[]) => {
-    const base = normalizeUsername(candidate) || `user${Date.now().toString().slice(-5)}`
-    if (!users.some((u) => (u.username ?? '').toLowerCase() === base)) return base
-    for (let i = 1; i < 9999; i++) {
-      const next = `${base}${i}`.slice(0, 20)
-      if (!users.some((u) => (u.username ?? '').toLowerCase() === next)) return next
-    }
-    return `${base}${Math.random().toString(16).slice(2, 6)}`.slice(0, 20)
-  }
-
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     setError('')
     setMessage('')
     const value = identifier.trim()
@@ -261,37 +265,36 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
       setError(t('authInvalidCredentials'))
       return
     }
-    const users = readUsers()
-    const phoneCandidate =
-      value.includes('@')
-        ? value
-        : value.startsWith('+')
-          ? value
-          : `${signInCountryCode}${value.replace(/\D/g, '')}`
-    const user = users.find((entry) => {
-      const byEmail = entry.email?.toLowerCase() === value.toLowerCase()
-      const byPhone = entry.phone === phoneCandidate
-      return (byEmail || byPhone) && entry.password === password
-    })
-    if (!user) {
+
+    try {
+      const res = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          identifier: value,
+          password,
+          countryCode: signInCountryCode,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as null | { error?: string }
+        if (data?.error === 'blocked') {
+          setError('This account is blocked.')
+          return
+        }
+        setError(t('authInvalidCredentials'))
+        return
+      }
+
+      const data = (await res.json()) as { user: AuthUser; sessionToken: string }
+      onAuthSuccess(data.user, data.sessionToken)
+    } catch {
       setError(t('authInvalidCredentials'))
-      return
     }
-    if (user.status === 'blocked') {
-      setError('This account is blocked.')
-      return
-    }
-    onAuthSuccess({
-      id: user.id,
-      name: user.name,
-      username: user.username,
-      email: user.email,
-      phone: user.phone,
-      provider: user.provider ?? 'email',
-    })
   }
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     setError('')
     setMessage('')
     const trimmedEmail = email.trim()
@@ -305,69 +308,71 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
       return
     }
     const fullPhone = trimmedPhone ? `${countryCode}${trimmedPhone}` : undefined
-    const users = readUsers()
-    const existing = users.find(
-      (entry) =>
-        (trimmedEmail && entry.email?.toLowerCase() === trimmedEmail.toLowerCase()) ||
-        (fullPhone && entry.phone === fullPhone)
-    )
-    if (existing) {
-      setError(t('authUserExists'))
-      return
-    }
     const normalized = normalizeUsername(username)
     if (!normalized) {
       setError('Choose a username.')
       return
     }
-    const usernameTaken = users.some((entry) => (entry.username ?? '').toLowerCase() === normalized)
-    if (usernameTaken) {
-      setError('That username is already taken.')
-      return
-    }
 
-    const newUser: StoredUserRecord = {
-      id: `u-${Date.now()}`,
-      name: name.trim() || undefined,
-      username: normalized,
-      email: trimmedEmail || undefined,
-      phone: fullPhone,
-      password: password.trim(),
-      provider: 'email',
-      role: 'user',
-      status: 'active',
-      createdAt: new Date().toISOString(),
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim() || undefined,
+          username: normalized,
+          email: trimmedEmail || undefined,
+          phone: fullPhone,
+          password: password.trim(),
+        }),
+      })
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as null | { error?: string }
+        if (data?.error === 'exists') {
+          setError(t('authUserExists'))
+          return
+        }
+        if (data?.error === 'weak_password') {
+          setError(t('authWeakPassword'))
+          return
+        }
+        if (data?.error === 'missing_contact') {
+          setError(t('authEmailOrPhoneRequired'))
+          return
+        }
+        setError('Unable to create account.')
+        return
+      }
+
+      const data = (await res.json()) as { user: AuthUser; sessionToken: string }
+      onAuthSuccess(data.user, data.sessionToken)
+    } catch {
+      setError('Unable to create account.')
     }
-    writeUsers([...users, newUser])
-    onAuthSuccess({
-      id: newUser.id,
-      name: newUser.name,
-      username: newUser.username,
-      email: newUser.email,
-      phone: newUser.phone,
-      provider: newUser.provider,
-    })
   }
 
-  const socialAuth = () => {
-    const users = readUsers()
-    const id = `u-gmail-${Date.now()}`
-    const email = 'joe.don@example.com'
-    const base = email.split('@')[0] ?? 'user'
-    const nextUsername = ensureUniqueUsername(base, users)
-    const newUser: StoredUserRecord = {
-      id,
-      email,
-      name: 'Joe Don',
-      username: nextUsername,
-      password: 'oauth',
-      provider: 'gmail',
-      role: 'user',
-      status: 'active',
-      createdAt: new Date().toISOString(),
+  const socialAuth = async () => {
+    setError('')
+    setMessage('')
+
+    try {
+      const res = await fetch('/api/auth/social', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ provider: 'gmail' }),
+      })
+
+      if (!res.ok) {
+        setError('Unable to continue with Google.')
+        return
+      }
+
+      const data = (await res.json()) as { user: AuthUser; sessionToken: string }
+      onAuthSuccess(data.user, data.sessionToken)
+    } catch {
+      setError('Unable to continue with Google.')
     }
-    writeUsers([...users, newUser])
-    onAuthSuccess({ id, email, name: newUser.name, username: newUser.username, provider: 'gmail' })
   }
 
   const backdropRow1 = authBackdropPosters
@@ -600,7 +605,16 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
                 />
                 <div className="mt-2 flex gap-2">
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      try {
+                        await fetch('/api/auth/forgot-password', {
+                          method: 'POST',
+                          headers: { 'content-type': 'application/json' },
+                          body: JSON.stringify({ email: forgotEmail }),
+                        })
+                      } catch {
+                        // ignore mock reset errors
+                      }
                       setForgotOpen(false)
                       setMessage(t('authResetSent'))
                     }}

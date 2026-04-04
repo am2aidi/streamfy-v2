@@ -4,23 +4,26 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Play, Pause, Plus, Star, ChevronRight, ChevronDown, ChevronUp, SkipBack, SkipForward } from 'lucide-react'
-import { musicTracks, type MusicTrack } from '@/lib/music-data'
+import type { MusicTrack } from '@/lib/music-data'
+import { authHeaders } from '@/lib/auth-client'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { getTranslation } from '@/lib/translations'
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { useTracks } from '@/hooks/useTracks'
 
 export function MusicSection() {
   const { settings, updateSetting } = useAppSettings()
-  const { requireAuth } = useAuth()
+  const { user, ready, requireAuth } = useAuth()
+  const { items: tracks } = useTracks()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const { toast } = useToast()
 
   // Filters & sorting
-  const genres = useMemo(() => Array.from(new Set(musicTracks.map((t) => t.genre))), [])
-  const artists = useMemo(() => Array.from(new Set(musicTracks.map((t) => t.artist))), [])
+  const genres = useMemo(() => Array.from(new Set(tracks.map((t) => t.genre))), [tracks])
+  const artists = useMemo(() => Array.from(new Set(tracks.map((t) => t.artist))), [tracks])
   const [genreFilter, setGenreFilter] = useState<string>('All')
   const [artistFilter, setArtistFilter] = useState<string>('All')
   const [query, setQuery] = useState('')
@@ -32,25 +35,68 @@ export function MusicSection() {
   const [currentIndex, setCurrentIndex] = useState<number | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
 
-  // Playlists stored in localStorage
-  const [playlists, setPlaylists] = useState<{ name: string; tracks: string[] }[]>(() => {
-    try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem('streamfy-playlists') : null
-      return raw ? JSON.parse(raw) : []
-    } catch {
-      return []
-    }
-  })
+  const [playlists, setPlaylists] = useState<{ name: string; tracks: string[] }[]>([])
+  const playlistsHydrated = useRef(false)
 
   useEffect(() => {
-    try {
-      localStorage.setItem('streamfy-playlists', JSON.stringify(playlists))
-    } catch {}
-  }, [playlists])
+    if (!ready) return
+    const headers = authHeaders()
+    if (!headers['x-session-token'] || !user) {
+      playlistsHydrated.current = true
+      setPlaylists([])
+      return
+    }
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/user/playlists', {
+          cache: 'no-store',
+          headers: {
+            ...headers,
+          },
+        })
+        if (!res.ok) return
+        const data = (await res.json()) as { playlists?: { name: string; tracks: string[] }[] }
+        if (!cancelled) {
+          setPlaylists(data.playlists ?? [])
+        }
+      } catch {
+        // ignore
+      } finally {
+        playlistsHydrated.current = true
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [ready, user])
+
+  useEffect(() => {
+    if (!playlistsHydrated.current) return
+    const headers = authHeaders()
+    if (!headers['x-session-token'] || !user) return
+
+    const timer = window.setTimeout(() => {
+      void fetch('/api/user/playlists', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...headers,
+        },
+        body: JSON.stringify({ playlists }),
+      }).catch(() => {})
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [playlists, user])
 
   // Derived list
   const filtered = useMemo(() => {
-    let list = musicTracks.slice()
+    let list = tracks.slice()
     if (favoritesOnly) list = list.filter((x) => settings.favoriteTracks.includes(x.id))
     if (genreFilter !== 'All') list = list.filter((x) => x.genre === genreFilter)
     if (artistFilter !== 'All') list = list.filter((x) => x.artist === artistFilter)
@@ -61,7 +107,7 @@ export function MusicSection() {
     if (sortBy === 'popular') list.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
     if (sortBy === 'newest') list.sort((a, b) => (new Date(b.releaseDate || 0).getTime() - new Date(a.releaseDate || 0).getTime()))
     return list
-  }, [genreFilter, artistFilter, query, sortBy])
+  }, [artistFilter, favoritesOnly, genreFilter, query, settings.favoriteTracks, sortBy, tracks])
 
   // Audio control helpers
   const playAt = async (index: number) => {
@@ -124,9 +170,11 @@ export function MusicSection() {
   const [newPlaylistName, setNewPlaylistName] = useState('')
 
   const handleOpenDialog = (track: MusicTrack | null) => {
-    setDialogTrack(track)
-    setNewPlaylistName('')
-    setDialogOpen(true)
+    requireAuth(() => {
+      setDialogTrack(track)
+      setNewPlaylistName('')
+      setDialogOpen(true)
+    }, t('authSigninPrompt'))
   }
 
   const handleCreatePlaylist = () => {

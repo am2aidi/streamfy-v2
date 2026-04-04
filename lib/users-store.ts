@@ -208,7 +208,7 @@ export function listManagedUsers(): ManagedUser[] {
         status: user.status === 'blocked' ? 'Blocked' : 'Active',
         statusKey: user.status === 'blocked' ? 'blocked' : 'active',
         provider: user.provider || 'email',
-      }
+      } satisfies ManagedUser
     })
     .sort((a, b) => {
       if (a.roleKey !== b.roleKey) return a.roleKey === 'admin' ? -1 : 1

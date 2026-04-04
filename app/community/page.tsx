@@ -123,7 +123,7 @@ export default function CommunityPage() {
             <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
               <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
                 <h2 className="text-white text-lg font-bold">Upload content</h2>
-                <p className="mt-1 text-xs text-gray-400">This is a prototype stored in your browser (localStorage).</p>
+                <p className="mt-1 text-xs text-gray-400">Images and upload details are saved in the database.</p>
 
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="sm:col-span-2">

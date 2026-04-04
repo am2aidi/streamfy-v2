@@ -2,43 +2,56 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CommunityItem, CommunityKind, CommunityLike, CommunityRating, CommunityStatus } from '@/lib/community-store'
-import {
-  getCommunityItems,
-  getCommunityLikes,
-  getCommunityRatings,
-  getCommunityStats,
-  setCommunityItems,
-  setCommunityLikes,
-  setCommunityRatings,
-  shouldAutoPublish,
-  subscribeToCommunity,
-} from '@/lib/community-store'
+import { getCommunityStats, shouldAutoPublish } from '@/lib/community-store'
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
 export function useCommunity() {
-  const [items, setItemsState] = useState<CommunityItem[]>(() => getCommunityItems())
-  const [ratings, setRatingsState] = useState<CommunityRating[]>(() => getCommunityRatings())
-  const [likes, setLikesState] = useState<CommunityLike[]>(() => getCommunityLikes())
+  const [items, setItemsState] = useState<CommunityItem[]>([])
+  const [ratings, setRatingsState] = useState<CommunityRating[]>([])
+  const [likes, setLikesState] = useState<CommunityLike[]>([])
+
+  const refresh = async () => {
+    const res = await fetch('/api/community', { cache: 'no-store' })
+    if (!res.ok) throw new Error('Failed to load community')
+    const data = (await res.json()) as {
+      items: CommunityItem[]
+      ratings: CommunityRating[]
+      likes: CommunityLike[]
+    }
+    setItemsState(data.items)
+    setRatingsState(data.ratings)
+    setLikesState(data.likes)
+  }
 
   useEffect(() => {
-    return subscribeToCommunity(() => {
-      setItemsState(getCommunityItems())
-      setRatingsState(getCommunityRatings())
-      setLikesState(getCommunityLikes())
-    })
+    void refresh().catch(() => {})
   }, [])
 
   return useMemo(() => {
     const setItems = (next: CommunityItem[] | ((prev: CommunityItem[]) => CommunityItem[])) => {
-      const resolved = typeof next === 'function' ? (next as (prev: CommunityItem[]) => CommunityItem[])(getCommunityItems()) : next
-      setCommunityItems(resolved)
+      const resolved = typeof next === 'function' ? (next as (prev: CommunityItem[]) => CommunityItem[])(items) : next
+      const removedIds = items.filter((item) => !resolved.some((candidate) => candidate.id === item.id)).map((item) => item.id)
+
+      void (async () => {
+        for (const item of removedIds) {
+          await fetch(`/api/community/${item}`, { method: 'DELETE' })
+        }
+        await refresh()
+      })().catch(() => {})
     }
 
     const updateItemStatus = (itemId: string, status: CommunityStatus) => {
-      setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, status } : i)))
+      void (async () => {
+        await fetch(`/api/community/${itemId}/status`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ status }),
+        })
+        await refresh()
+      })().catch(() => {})
     }
 
     const createItem = (input: {
@@ -49,56 +62,53 @@ export function useCommunity() {
       trailerUrl?: string
       createdBy: string
     }) => {
-      const item: CommunityItem = {
-        id: uid('ugc'),
-        kind: input.kind,
-        title: input.title.trim(),
-        description: input.description.trim(),
-        imageUrl: input.imageUrl.trim(),
-        trailerUrl: input.trailerUrl?.trim() || undefined,
-        createdAt: new Date().toISOString(),
-        createdBy: input.createdBy,
-        status: 'pending',
-      }
-      setItems((prev) => [item, ...prev])
-      return item
+      const tempId = uid('ugc')
+      void (async () => {
+        await fetch('/api/community', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(input),
+        })
+        await refresh()
+      })().catch(() => {})
+      return tempId
     }
 
     const rate = (itemId: string, userId: string, stars: number) => {
       const safeStars = Math.min(5, Math.max(1, Math.round(stars)))
-      const existing = getCommunityRatings().find((r) => r.itemId === itemId && r.userId === userId)
-      const nextRatings = existing
-        ? getCommunityRatings().map((r) => (r.id === existing.id ? { ...r, stars: safeStars, createdAt: new Date().toISOString() } : r))
-        : [{ id: uid('rate'), itemId, userId, stars: safeStars, createdAt: new Date().toISOString() }, ...getCommunityRatings()]
-      setCommunityRatings(nextRatings)
+      void (async () => {
+        const res = await fetch(`/api/community/${itemId}/rate`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ userId, stars: safeStars }),
+        })
 
-      const stats = getCommunityStats(itemId, nextRatings, getCommunityLikes())
-      if (shouldAutoPublish(stats)) {
-        const item = getCommunityItems().find((i) => i.id === itemId)
-        if (item && item.status === 'pending') updateItemStatus(itemId, 'published')
-      }
+        if (res.ok) {
+          const data = (await res.json()) as { likes: CommunityLike[]; ratings: CommunityRating[] }
+          setLikesState(data.likes)
+          setRatingsState(data.ratings)
+          const stats = getCommunityStats(itemId, data.ratings, data.likes)
+          if (shouldAutoPublish(stats)) updateItemStatus(itemId, 'published')
+        }
+      })().catch(() => {})
     }
 
     const toggleLike = (itemId: string, userId: string) => {
-      const current = getCommunityLikes()
-      const existing = current.find((l) => l.itemId === itemId && l.userId === userId)
-      const likeAdded = !existing
-      const nextLikes = existing ? current.filter((l) => l.id !== existing.id) : [{ id: uid('like'), itemId, userId, createdAt: new Date().toISOString() }, ...current]
-      setCommunityLikes(nextLikes)
+      void (async () => {
+        const res = await fetch(`/api/community/${itemId}/like`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ userId }),
+        })
 
-      if (likeAdded) {
-        const currentRatings = getCommunityRatings()
-        const hasRating = currentRatings.some((r) => r.itemId === itemId && r.userId === userId)
-        if (!hasRating) {
-          setCommunityRatings([{ id: uid('rate'), itemId, userId, stars: 5, createdAt: new Date().toISOString() }, ...currentRatings])
+        if (res.ok) {
+          const data = (await res.json()) as { likes: CommunityLike[]; ratings: CommunityRating[] }
+          setLikesState(data.likes)
+          setRatingsState(data.ratings)
+          const stats = getCommunityStats(itemId, data.ratings, data.likes)
+          if (shouldAutoPublish(stats)) updateItemStatus(itemId, 'published')
         }
-      }
-
-      const stats = getCommunityStats(itemId, getCommunityRatings(), nextLikes)
-      if (shouldAutoPublish(stats)) {
-        const item = getCommunityItems().find((i) => i.id === itemId)
-        if (item && item.status === 'pending') updateItemStatus(itemId, 'published')
-      }
+      })().catch(() => {})
     }
 
     const statsFor = (itemId: string) => getCommunityStats(itemId, ratings, likes)

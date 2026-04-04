@@ -6,7 +6,6 @@ import { MusicSection } from '@/components/MusicSection'
 import { MusicPlayer } from '@/components/MusicPlayer'
 import { Heart, Music, Star } from 'lucide-react'
 import Link from 'next/link'
-import { musicTracks } from '@/lib/music-data'
 import Image from 'next/image'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { useMemo, useState } from 'react'
@@ -14,21 +13,24 @@ import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
 import { getTranslation } from '@/lib/translations'
 import { NewsFeed } from '@/components/NewsFeed'
 import { useNewsItems } from '@/hooks/useNewsItems'
-import { shortVideos } from '@/lib/shorts-data'
 import { ShortPreviewCard } from '@/components/shorts/ShortPreviewCard'
+import { useTracks } from '@/hooks/useTracks'
+import { useShorts } from '@/hooks/useShorts'
 
 export default function MusicPage() {
   const { settings, updateSetting } = useAppSettings()
+  const { items: tracks } = useTracks()
+  const { items: shorts } = useShorts()
   const { byCategory } = useNewsItems()
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [view, setView] = useState<'all' | 'news' | 'reels'>('all')
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const musicNews = byCategory('music')
-  const musicReels = useMemo(() => shortVideos.filter((s) => s.category === 'music').slice(0, 8), [])
+  const musicReels = useMemo(() => shorts.filter((s) => s.category === 'music').slice(0, 8), [shorts])
 
   const filteredTracks = settings.favoriteTracks && favoritesOnly
-    ? musicTracks.filter((t) => settings.favoriteTracks.includes(t.id))
-    : musicTracks
+    ? tracks.filter((t) => settings.favoriteTracks.includes(t.id))
+    : tracks
 
   return (
     <div className="flex min-h-screen bg-black">

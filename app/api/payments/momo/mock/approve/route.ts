@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
-import { approveMockMoMoPayment } from '@/lib/payments/momo-mock'
+import { updatePaymentInDb } from '@/lib/server/payments-db'
+import { requireAdminUser } from '@/lib/server/route-auth'
 
 export async function POST(req: Request) {
+  const { response } = await requireAdminUser(req)
+  if (response) return response
+
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Not available' }, { status: 404 })
   }
@@ -10,8 +14,7 @@ export async function POST(req: Request) {
   const paymentId = String(body?.paymentId ?? '')
   if (!paymentId) return NextResponse.json({ error: 'paymentId required' }, { status: 400 })
 
-  const updated = approveMockMoMoPayment(paymentId)
+  const updated = await updatePaymentInDb(paymentId, { status: 'succeeded' })
   if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json({ payment: updated })
 }
-

@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react'
 import { Download, Facebook, Instagram, Smartphone, Star, Youtube } from 'lucide-react'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
-import { movieCards } from '@/lib/movies-data'
 import { useToast } from '@/hooks/use-toast'
 import { DownloadOptionsModal } from '@/components/download/DownloadOptionsModal'
 import { useCommunity } from '@/hooks/useCommunity'
@@ -12,6 +11,7 @@ import { useAuth } from '@/components/AuthProvider'
 import { SmartCover } from '@/components/SmartCover'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation } from '@/lib/translations'
+import { useMovies } from '@/hooks/useMovies'
 
 type ResultItem = {
   id: string
@@ -27,6 +27,7 @@ type ResultItem = {
 export default function DownloaderPage() {
   const { toast } = useToast()
   const { user, requireAuth } = useAuth()
+  const { items: movies } = useMovies()
   const { items: communityItems } = useCommunity()
   const { settings } = useAppSettings()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
@@ -35,7 +36,7 @@ export default function DownloaderPage() {
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const base: ResultItem[] = movieCards.map((m) => ({
+    const base: ResultItem[] = movies.map((m) => ({
       id: m.id,
       title: m.title,
       image: m.image,
@@ -60,7 +61,7 @@ export default function DownloaderPage() {
     const all = [...publishedCommunity, ...base]
     if (!q) return all.slice(0, 18)
     return all.filter((r) => (r.title + ' ' + r.tags.join(' ') + ' ' + r.description).toLowerCase().includes(q)).slice(0, 24)
-  }, [query, communityItems])
+  }, [communityItems, movies, query])
 
   return (
     <div className="flex min-h-screen bg-black">

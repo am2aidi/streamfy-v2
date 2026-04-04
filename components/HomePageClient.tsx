@@ -6,11 +6,11 @@ import Link from 'next/link'
 import { Check, ChevronRight, ListPlus, Pause, Play, Search, SkipBack, SkipForward, Star, X } from 'lucide-react'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation, type TranslationKey, languages } from '@/lib/translations'
-import { movieCards } from '@/lib/movies-data'
-import { musicTracks } from '@/lib/music-data'
-import { getAllMatches } from '@/lib/sports-data'
 import { BRAND_NAME } from '@/lib/brand'
 import { useToast } from '@/hooks/use-toast'
+import { useMovies } from '@/hooks/useMovies'
+import { useTracks } from '@/hooks/useTracks'
+import { useSportsMatches } from '@/hooks/useSportsMatches'
 
 const filterYears = ['all', '2026', '2025', '2024', 'other'] as const
 const filterCategories = ['All', 'Action', 'Comedy', 'Sci-Fi']
@@ -20,6 +20,9 @@ const safeTrackImages = new Set(['/trending-songs.jpg', '/new-releases.jpg', '/p
 export function HomePageClient() {
   const { settings, updateSetting } = useAppSettings()
   const { toast } = useToast()
+  const { items: movies } = useMovies()
+  const { items: tracks } = useTracks()
+  const { items: matches } = useSportsMatches()
   const t = (key: TranslationKey) => getTranslation(settings.language, key)
   const [search, setSearch] = useState('')
   const [selectedYear, setSelectedYear] = useState<(typeof filterYears)[number]>('all')
@@ -40,23 +43,23 @@ export function HomePageClient() {
   }, [])
 
   const leagues = useMemo(() => {
-    const unique = new Set(getAllMatches().map((match) => match.league))
+    const unique = new Set(matches.map((match) => match.league))
     return ['all', ...Array.from(unique)]
-  }, [])
+  }, [matches])
 
   const normalizedQuery = search.trim().toLowerCase()
   const normalizedTracks = useMemo(() => {
-    return musicTracks
+    return tracks
       .slice(0, 24)
       .map((track) => ({
         ...track,
         image: safeTrackImages.has(track.image) ? track.image : '/music-featured.jpg',
         releaseYear: track.releaseDate ? new Date(track.releaseDate).getFullYear() : 2026,
       }))
-  }, [])
+  }, [tracks])
 
   const filteredMovies = useMemo(() => {
-    return movieCards.filter((movie) => {
+    return movies.filter((movie) => {
       const byYear =
         selectedYear === 'all' ||
         String(movie.year) === selectedYear ||
@@ -69,7 +72,7 @@ export function HomePageClient() {
         movie.genre.toLowerCase().includes(normalizedQuery)
       return byYear && byCategory && bySearch
     })
-  }, [normalizedQuery, selectedCategory, selectedYear])
+  }, [movies, normalizedQuery, selectedCategory, selectedYear])
 
   const filteredTracks = useMemo(() => {
     return normalizedTracks.filter((track) => {
@@ -88,7 +91,7 @@ export function HomePageClient() {
   }, [normalizedQuery, normalizedTracks, selectedCategory, selectedYear])
 
   const filteredMatches = useMemo(() => {
-    return getAllMatches().filter((match) => {
+    return matches.filter((match) => {
       const byLeague = selectedLeague === 'all' || match.league === selectedLeague
       const byYear = selectedYear === 'all' || selectedYear === '2026'
       const byCategory = selectedCategory === 'All' || match.league.toLowerCase().includes(selectedCategory.toLowerCase())
@@ -99,7 +102,7 @@ export function HomePageClient() {
         match.team2.name.toLowerCase().includes(normalizedQuery)
       return byLeague && byYear && byCategory && bySearch
     })
-  }, [normalizedQuery, selectedCategory, selectedLeague, selectedYear])
+  }, [matches, normalizedQuery, selectedCategory, selectedLeague, selectedYear])
 
   const currentTrack = filteredTracks[currentTrackIndex] ?? filteredTracks[0] ?? normalizedTracks[0]
 

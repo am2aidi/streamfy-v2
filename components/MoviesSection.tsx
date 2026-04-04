@@ -6,38 +6,40 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronRight, Download, ListPlus, Play, Plus, Search, Star } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { movieCards } from '@/lib/movies-data'
+import type { MovieItem } from '@/lib/movies-data'
 import { useAuth } from '@/components/AuthProvider'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation, type Language } from '@/lib/translations'
+import { useMovies } from '@/hooks/useMovies'
 
 const featuredMeta: Record<string, { season: string; episode: string; director: string }> = {
   kylexy: { season: 'S2', episode: 'E8', director: 'K. Ortega' },
   'dark-pursuit': { season: 'S1', episode: 'E5', director: 'N. Adair' },
 }
 
-export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof movieCards)[number]['type'] } = {}) {
+export function MoviesSection({ defaultType }: { defaultType?: 'All' | MovieItem['type'] } = {}) {
   const { toast } = useToast()
   const router = useRouter()
   const { requireAuth } = useAuth()
   const { settings, updateSetting } = useAppSettings()
+  const { items } = useMovies()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
 
   const [genreFilter, setGenreFilter] = useState('All')
-  const [typeFilter, setTypeFilter] = useState<'All' | (typeof movieCards)[number]['type']>(defaultType ?? 'All')
+  const [typeFilter, setTypeFilter] = useState<'All' | MovieItem['type']>(defaultType ?? 'All')
   const [yearFilter, setYearFilter] = useState('All')
   const [ratingFilter, setRatingFilter] = useState('All')
   const [languageFilter, setLanguageFilter] = useState<'All' | Language>('All')
   const [search, setSearch] = useState('')
 
-  const genres = useMemo(() => ['All', ...Array.from(new Set(movieCards.map((movie) => movie.genre)))], [])
+  const genres = useMemo(() => ['All', ...Array.from(new Set(items.map((movie) => movie.genre)))], [items])
   const years = useMemo(
-    () => ['All', ...Array.from(new Set(movieCards.map((movie) => String(movie.year)))).sort().reverse()],
-    []
+    () => ['All', ...Array.from(new Set(items.map((movie) => String(movie.year)))).sort().reverse()],
+    [items]
   )
 
   const filteredMovies = useMemo(() => {
-    return movieCards.filter((movie) => {
+    return items.filter((movie) => {
       const matchesGenre = genreFilter === 'All' || movie.genre === genreFilter
       const matchesType = typeFilter === 'All' || movie.type === typeFilter
       const matchesYear = yearFilter === 'All' || String(movie.year) === yearFilter
@@ -51,10 +53,10 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
         movie.genre.toLowerCase().includes(query)
       return matchesGenre && matchesType && matchesYear && matchesRating && matchesLanguage && matchesSearch
     })
-  }, [genreFilter, ratingFilter, search, yearFilter, languageFilter, typeFilter])
+  }, [genreFilter, items, languageFilter, ratingFilter, search, typeFilter, yearFilter])
 
-  const featured = filteredMovies.find((movie) => movie.id === 'kylexy') ?? filteredMovies[0] ?? movieCards[0]
-  const listMovies = filteredMovies.filter((movie) => movie.id !== featured.id)
+  const featured = filteredMovies.find((movie) => movie.id === 'kylexy') ?? filteredMovies[0] ?? items[0]
+  const listMovies = featured ? filteredMovies.filter((movie) => movie.id !== featured.id) : filteredMovies
 
   const clearAllFilters = () => {
     setGenreFilter('All')
@@ -206,7 +208,14 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
         </div>
       </div>
 
-      <article className="group relative overflow-hidden rounded-2xl border border-white/10 bg-black/40 streamfy-fade-slide">
+      {!featured ? (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-sm text-gray-300">
+          No movies found yet.
+        </div>
+      ) : null}
+
+      {featured ? (
+        <article className="group relative overflow-hidden rounded-2xl border border-white/10 bg-black/40 streamfy-fade-slide">
         <div className="relative h-[320px] w-full">
           <Image
             src={featured.image}
@@ -252,7 +261,8 @@ export function MoviesSection({ defaultType }: { defaultType?: 'All' | (typeof m
             </div>
           </div>
         </div>
-      </article>
+        </article>
+      ) : null}
 
       <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 [column-fill:_balance]" style={{ columnGap: '1rem' }}>
         {listMovies.map((movie, i) => (

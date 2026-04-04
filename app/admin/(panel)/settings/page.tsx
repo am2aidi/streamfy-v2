@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { languages, type Language, type TranslationKey, translations } from '@/lib/translations'
 
 type SocialLink = { name: 'TikTok' | 'WhatsApp' | 'YouTube'; url: string; enabled: boolean }
 type PaymentMethod = { id: string; label: string; enabled: boolean; feePercent: number }
+type FilterOptions = { movies: string[]; music: string[]; sports: string[] }
 
 const defaultSocial: SocialLink[] = [
   { name: 'TikTok', url: 'https://tiktok.com/@streamfy', enabled: true },
@@ -19,7 +20,7 @@ const defaultPayments: PaymentMethod[] = [
   { id: 'ke-mpesa', label: 'MPESA Kenya', enabled: true, feePercent: 1.2 },
 ]
 
-const defaultFilters = {
+const defaultFilters: FilterOptions = {
   movies: ['Action', 'Comedy', 'Sci-Fi', 'Drama'],
   music: ['Pop', 'Rap', 'EDM'],
   sports: ['Football', 'Basketball', 'Volleyball'],
@@ -27,62 +28,97 @@ const defaultFilters = {
 
 export default function AdminSettingsPage() {
   const { toast } = useToast()
-
-  const readStored = <T,>(storageKey: string, fallback: T): T => {
-    if (typeof window === 'undefined') return fallback
-    try {
-      const raw = window.localStorage.getItem(storageKey)
-      return raw ? (JSON.parse(raw) as T) : fallback
-    } catch {
-      return fallback
-    }
-  }
-
-  const [social, setSocial] = useState<SocialLink[]>(() => readStored('streamfy-admin-social-links', defaultSocial))
-  const [payments, setPayments] = useState<PaymentMethod[]>(() => readStored('streamfy-admin-payment-methods', defaultPayments))
-  const [filters, setFilters] = useState(() => readStored('streamfy-admin-filter-options', defaultFilters))
-  const [playlists, setPlaylists] = useState<string[]>(() => readStored('streamfy-admin-playlists', ['Workout Mix', 'Night Drive']))
+  const [social, setSocial] = useState<SocialLink[]>(defaultSocial)
+  const [payments, setPayments] = useState<PaymentMethod[]>(defaultPayments)
+  const [filters, setFilters] = useState<FilterOptions>(defaultFilters)
+  const [playlists, setPlaylists] = useState<string[]>(['Workout Mix', 'Night Drive'])
   const [newPlaylist, setNewPlaylist] = useState('')
   const [lang, setLang] = useState<Language>('en')
   const [key, setKey] = useState<TranslationKey>('watchNow')
-  const [translationOverrides, setTranslationOverrides] = useState<Partial<Record<Language, Partial<Record<TranslationKey, string>>>>>(() =>
-    readStored('streamfy-translation-overrides', {}),
+  const [translationOverrides, setTranslationOverrides] = useState<Partial<Record<Language, Partial<Record<TranslationKey, string>>>>>({})
+  const [value, setValue] = useState('')
+
+  const resolveTranslationValue = useCallback(
+    (
+      nextLang: Language,
+      nextKey: TranslationKey,
+      overrides = translationOverrides,
+    ) => {
+      const selected = translations[nextLang] as Partial<Record<TranslationKey, string>>
+      const fallback = translations.en as Record<TranslationKey, string>
+      return overrides[nextLang]?.[nextKey] ?? selected[nextKey] ?? fallback[nextKey] ?? ''
+    },
+    [translationOverrides],
   )
 
-  const resolveTranslationValue = (nextLang: Language, nextKey: TranslationKey) => {
-    const selected = translations[nextLang] as Partial<Record<TranslationKey, string>>
-    const fallback = translations.en as Record<TranslationKey, string>
-    return translationOverrides[nextLang]?.[nextKey] ?? selected[nextKey] ?? fallback[nextKey] ?? ''
+  useEffect(() => {
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const res = await fetch('/api/admin/settings', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = (await res.json()) as {
+          socialLinks?: SocialLink[]
+          paymentMethods?: PaymentMethod[]
+          filterOptions?: FilterOptions
+          playlistPresets?: { name: string }[]
+          translationOverrides?: Partial<Record<Language, Partial<Record<TranslationKey, string>>>>
+        }
+
+        if (cancelled) return
+
+        setSocial(data.socialLinks?.length ? data.socialLinks : defaultSocial)
+        setPayments(data.paymentMethods?.length ? data.paymentMethods : defaultPayments)
+        setFilters(data.filterOptions ?? defaultFilters)
+        setPlaylists(data.playlistPresets?.length ? data.playlistPresets.map((item) => item.name) : ['Workout Mix', 'Night Drive'])
+        const overrides = data.translationOverrides ?? {}
+        setTranslationOverrides(overrides)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('streamfy-translation-overrides', JSON.stringify(overrides))
+        }
+        setValue(resolveTranslationValue('en', 'watchNow', overrides))
+      } catch {
+        // keep defaults
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [resolveTranslationValue])
+
+  const saveSection = async (section: string, items: unknown, description: string) => {
+    await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ section, items }),
+    })
+    toast({ title: 'Saved', description })
   }
 
-  const [value, setValue] = useState(() => resolveTranslationValue('en', 'watchNow'))
-
-  const saveSocial = () => {
-    localStorage.setItem('streamfy-admin-social-links', JSON.stringify(social))
-    toast({ title: 'Saved', description: 'Social links updated.' })
+  const saveSocial = async () => {
+    await saveSection('socialLinks', social, 'Social links updated.')
   }
 
-  const savePayments = () => {
+  const savePayments = async () => {
     const invalid = payments.find((p) => p.feePercent < 0 || p.feePercent > 100)
     if (invalid) {
       toast({ title: 'Invalid fee', description: `${invalid.label} fee must be 0-100%.` })
       return
     }
-    localStorage.setItem('streamfy-admin-payment-methods', JSON.stringify(payments))
-    toast({ title: 'Saved', description: 'Payment methods updated.' })
+    await saveSection('paymentMethods', payments, 'Payment methods updated.')
   }
 
-  const saveFilters = () => {
-    localStorage.setItem('streamfy-admin-filter-options', JSON.stringify(filters))
-    toast({ title: 'Saved', description: 'Filter options updated.' })
+  const saveFilters = async () => {
+    await saveSection('filterOptions', filters, 'Filter options updated.')
   }
 
-  const savePlaylists = () => {
-    localStorage.setItem('streamfy-admin-playlists', JSON.stringify(playlists))
-    toast({ title: 'Saved', description: 'Playlist options updated.' })
+  const savePlaylists = async () => {
+    await saveSection('playlistPresets', playlists, 'Playlist options updated.')
   }
 
-  const saveTranslation = () => {
+  const saveTranslation = async () => {
     if (!value.trim()) {
       toast({ title: 'Missing value', description: 'Translation text is required.' })
       return
@@ -95,8 +131,15 @@ export default function AdminSettingsPage() {
       },
     }
     setTranslationOverrides(next)
-    localStorage.setItem('streamfy-translation-overrides', JSON.stringify(next))
-    toast({ title: 'Translation saved', description: `${lang} → ${key}` })
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('streamfy-translation-overrides', JSON.stringify(next))
+    }
+    await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ section: 'translationOverride', language: lang, key, value }),
+    })
+    toast({ title: 'Translation saved', description: `${lang} -> ${key}` })
   }
 
   const allKeys = useMemo(() => Object.keys(translations.en) as TranslationKey[], [])
@@ -130,7 +173,7 @@ export default function AdminSettingsPage() {
                 />
               </div>
             ))}
-            <button onClick={saveSocial} className="rounded-xl bg-[#f4a30a] px-4 py-2 text-sm font-semibold text-black">Save Social Links</button>
+            <button onClick={() => void saveSocial()} className="rounded-xl bg-[#f4a30a] px-4 py-2 text-sm font-semibold text-black">Save Social Links</button>
           </div>
         </article>
 
@@ -162,7 +205,7 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
             ))}
-            <button onClick={savePayments} className="rounded-xl bg-[#f4a30a] px-4 py-2 text-sm font-semibold text-black">Save Payment Methods</button>
+            <button onClick={() => void savePayments()} className="rounded-xl bg-[#f4a30a] px-4 py-2 text-sm font-semibold text-black">Save Payment Methods</button>
           </div>
         </article>
       </section>
@@ -182,7 +225,7 @@ export default function AdminSettingsPage() {
                         onClick={() => setFilters((prev) => ({ ...prev, [section]: prev[section].filter((_, i) => i !== idx) }))}
                         className="text-red-300"
                       >
-                        ×
+                        x
                       </button>
                     </span>
                   ))}
@@ -199,7 +242,7 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
             ))}
-            <button onClick={saveFilters} className="rounded-xl bg-[#f4a30a] px-4 py-2 text-sm font-semibold text-black">Save Filter Options</button>
+            <button onClick={() => void saveFilters()} className="rounded-xl bg-[#f4a30a] px-4 py-2 text-sm font-semibold text-black">Save Filter Options</button>
           </div>
         </article>
 
@@ -228,11 +271,11 @@ export default function AdminSettingsPage() {
               {playlists.map((p, idx) => (
                 <span key={`${p}-${idx}`} className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs">
                   {p}
-                  <button onClick={() => setPlaylists((prev) => prev.filter((_, i) => i !== idx))} className="text-red-300">×</button>
+                  <button onClick={() => setPlaylists((prev) => prev.filter((_, i) => i !== idx))} className="text-red-300">x</button>
                 </span>
               ))}
             </div>
-            <button onClick={savePlaylists} className="rounded-xl bg-[#f4a30a] px-4 py-2 text-sm font-semibold text-black">Save Playlists</button>
+            <button onClick={() => void savePlaylists()} className="rounded-xl bg-[#f4a30a] px-4 py-2 text-sm font-semibold text-black">Save Playlists</button>
           </div>
         </article>
       </section>
@@ -267,9 +310,9 @@ export default function AdminSettingsPage() {
             ))}
           </select>
           <input value={value} onChange={(e) => setValue(e.target.value)} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm" />
-          <button onClick={saveTranslation} className="rounded-xl bg-[#f4a30a] px-4 py-2 text-sm font-semibold text-black">Save</button>
+          <button onClick={() => void saveTranslation()} className="rounded-xl bg-[#f4a30a] px-4 py-2 text-sm font-semibold text-black">Save</button>
         </div>
-        <p className="mt-2 text-xs text-slate-400">Changes apply instantly to UI text. Media descriptions remain admin-entered content.</p>
+        <p className="mt-2 text-xs text-slate-400">Changes apply instantly to UI text and are saved in the database.</p>
       </section>
     </div>
   )

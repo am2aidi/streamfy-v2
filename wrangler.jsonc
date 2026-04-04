@@ -1,0 +1,11 @@
+{
+  "name": "streamfy-new",
+  "compatibility_date": "2026-04-04",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "streamfy-app",
+      "database_id": "1b83c299-508e-4671-9967-22c06e29ebff"
+    }
+  ]
+}

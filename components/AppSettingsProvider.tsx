@@ -1,6 +1,7 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react'
+import { authHeaders, readStoredAuthSession, subscribeToAuthSession } from '@/lib/auth-client'
 import type { Language } from '@/lib/translations'
 
 export type AccentTheme =
@@ -112,6 +113,7 @@ function pickAccentForeground(accentHex: string) {
 export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings)
   const [mounted, setMounted] = useState(false)
+  const hydratedRef = useRef(false)
 
   useEffect(() => {
     setMounted(true)
@@ -127,6 +129,48 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       // ignore parse errors
+    }
+
+    let cancelled = false
+
+    const syncRemoteSettings = async () => {
+      const session = readStoredAuthSession()
+      if (!session?.token) return
+
+      try {
+        const res = await fetch('/api/user/settings', {
+          cache: 'no-store',
+          headers: {
+            ...authHeaders(),
+          },
+        })
+        if (!res.ok) return
+        const data = (await res.json()) as { settings?: Partial<AppSettings> & { language?: unknown } }
+        if (cancelled || !data.settings) return
+        const remoteSettings = data.settings
+
+        setSettings((prev) => ({
+          ...prev,
+          ...remoteSettings,
+          language: normalizeLanguage(remoteSettings.language),
+        }))
+      } catch {
+        // ignore remote sync failures
+      } finally {
+        hydratedRef.current = true
+      }
+    }
+
+    void syncRemoteSettings()
+    const stop = subscribeToAuthSession(() => {
+      if (!cancelled) {
+        void syncRemoteSettings()
+      }
+    })
+
+    return () => {
+      cancelled = true
+      stop()
     }
   }, [])
 
@@ -154,6 +198,28 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--app-accent-b', accent.b)
     root.style.setProperty('--app-accent-fg', pickAccentForeground(accent.a))
   }, [settings, mounted])
+
+  useEffect(() => {
+    if (!mounted) return
+    if (!hydratedRef.current) return
+    const session = readStoredAuthSession()
+    if (!session?.token) return
+
+    const timer = window.setTimeout(() => {
+      void fetch('/api/user/settings', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ settings }),
+      }).catch(() => {})
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [mounted, settings])
 
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }))

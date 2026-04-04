@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import { Plus, Upload } from 'lucide-react'
+import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/hooks/use-toast'
 import { useFilterOptions } from '@/lib/admin-filters'
-import { readJson, writeJson } from '@/lib/local-store'
-import { getAdminSession } from '@/lib/users-store'
+import { fileToDataUrl, isStoredImageSource, summarizeStoredAsset } from '@/lib/file-data-url'
 
 type MovieLanguage = 'en' | 'fr' | 'rw'
 type MovieStatus = 'Active' | 'Draft'
@@ -26,8 +26,6 @@ type MovieRow = {
   videoLabel: string
   thumbnailLabel: string
 }
-
-const STORAGE_KEY = 'streamfy-admin-movies'
 
 const defaultRows: MovieRow[] = [
   {
@@ -97,10 +95,10 @@ function createForm(adminName: string, adminEmail: string): MovieRow {
 
 export default function AdminMoviesPage() {
   const { toast } = useToast()
+  const { user } = useAuth()
   const categoryOptions = useFilterOptions('movies')
-  const currentAdmin = getAdminSession()
-  const adminName = currentAdmin?.name || currentAdmin?.username || 'Zaidi Kwizera'
-  const adminEmail = currentAdmin?.email || 'zaidikwizera@gmail.com'
+  const adminName = user?.name || user?.username || 'Zaidi Kwizera'
+  const adminEmail = user?.email || 'zaidikwizera@gmail.com'
   const editorRef = useRef<HTMLDivElement | null>(null)
 
   const [rows, setRows] = useState<MovieRow[]>(defaultRows)
@@ -111,10 +109,22 @@ export default function AdminMoviesPage() {
   const [form, setForm] = useState<MovieRow>(() => createForm(adminName, adminEmail))
 
   useEffect(() => {
-    const stored = readJson<MovieRow[]>(STORAGE_KEY, defaultRows)
-    const nextRows = stored.length > 0 ? stored : defaultRows
-    setRows(nextRows)
-    writeJson(STORAGE_KEY, nextRows)
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const res = await fetch('/api/movies?admin=1', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = (await res.json()) as { items: MovieRow[] }
+        if (!cancelled) setRows(data.items)
+      } catch {
+        // keep default fallback
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -124,9 +134,11 @@ export default function AdminMoviesPage() {
     }
   }, [form.descriptionHtml, open])
 
-  const persistRows = (nextRows: MovieRow[]) => {
-    setRows(nextRows)
-    writeJson(STORAGE_KEY, nextRows)
+  const refreshRows = async () => {
+    const res = await fetch('/api/movies?admin=1', { cache: 'no-store' })
+    if (!res.ok) throw new Error('Failed to refresh movies')
+    const data = (await res.json()) as { items: MovieRow[] }
+    setRows(data.items)
   }
 
   const filteredRows = useMemo(() => {
@@ -169,7 +181,7 @@ export default function AdminMoviesPage() {
     setEditIndex(null)
   }
 
-  const saveMovie = () => {
+  const saveMovie = async () => {
     const cleanedTitle = form.title.trim()
     if (!cleanedTitle) {
       toast({ title: 'Missing title', description: 'Movie title is required.' })
@@ -186,23 +198,24 @@ export default function AdminMoviesPage() {
       date: form.date || new Date().toISOString().slice(0, 10),
     }
 
-    if (editIndex === null) {
-      const nextRows = [nextMovie, ...rows]
-      persistRows(nextRows)
-      toast({ title: 'Movie added', description: `${nextMovie.title} was added by ${adminName}.` })
-    } else {
-      const nextRows = rows.map((item, idx) => (idx === editIndex ? nextMovie : item))
-      persistRows(nextRows)
-      toast({ title: 'Movie updated', description: `${nextMovie.title} was updated by ${adminName}.` })
-    }
+    await fetch('/api/movies', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(nextMovie),
+    })
+    await refreshRows()
+    toast({
+      title: editIndex === null ? 'Movie added' : 'Movie updated',
+      description: `${nextMovie.title} was ${editIndex === null ? 'added' : 'updated'} by ${adminName}.`,
+    })
 
     closeModal()
   }
 
-  const removeMovie = (movieId: string) => {
+  const removeMovie = async (movieId: string) => {
     const movie = rows.find((item) => item.id === movieId)
-    const nextRows = rows.filter((item) => item.id !== movieId)
-    persistRows(nextRows)
+    await fetch(`/api/movies/${movieId}`, { method: 'DELETE' })
+    await refreshRows()
     toast({ title: 'Movie deleted', description: `${movie?.title || 'Movie'} removed from list.` })
   }
 
@@ -220,6 +233,17 @@ export default function AdminMoviesPage() {
       ...prev,
       descriptionHtml: editorRef.current?.innerHTML || '<p></p>',
     }))
+  }
+
+  const saveImageField = async (field: 'poster' | 'thumbnailLabel', file: File | null) => {
+    if (!file) return
+    try {
+      const dataUrl = await fileToDataUrl(file)
+      setForm((prev) => ({ ...prev, [field]: dataUrl }))
+      toast({ title: 'Image saved', description: `${file.name} is ready to be stored in the database.` })
+    } catch {
+      toast({ title: 'Upload failed', description: 'We could not read that image file.' })
+    }
   }
 
   return (
@@ -371,7 +395,7 @@ export default function AdminMoviesPage() {
               <input
                 value={form.poster}
                 onChange={(e) => setForm((prev) => ({ ...prev, poster: e.target.value }))}
-                placeholder="Poster URL (optional)"
+                placeholder="Poster URL or use the upload below"
                 className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm"
               />
               <input
@@ -436,6 +460,22 @@ export default function AdminMoviesPage() {
                 </p>
               </div>
 
+              <div className="rounded-xl border border-dashed border-white/20 bg-black/20 px-3 py-4 text-xs text-slate-300">
+                <span className="inline-flex items-center gap-2"><Upload size={14} /> Upload Poster Image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="mt-2 block text-xs"
+                  onChange={(e) => void saveImageField('poster', e.target.files?.[0] ?? null)}
+                />
+                <p className="mt-2 text-[11px] text-slate-400">{summarizeStoredAsset(form.poster, 'No poster selected')}</p>
+                {isStoredImageSource(form.poster) ? (
+                  <div className="relative mt-3 h-36 overflow-hidden rounded-xl border border-white/10">
+                    <Image src={form.poster} alt="Poster preview" fill className="object-cover" unoptimized />
+                  </div>
+                ) : null}
+              </div>
+
               <label className="rounded-xl border border-dashed border-white/20 bg-black/20 px-3 py-4 text-xs text-slate-300">
                 <span className="inline-flex items-center gap-2"><Upload size={14} /> Upload Video File</span>
                 <input
@@ -455,15 +495,16 @@ export default function AdminMoviesPage() {
                 <span className="inline-flex items-center gap-2"><Upload size={14} /> Upload Thumbnail</span>
                 <input
                   type="file"
+                  accept="image/*"
                   className="mt-2 block text-xs"
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      thumbnailLabel: e.target.files?.[0]?.name || prev.thumbnailLabel,
-                    }))
-                  }
+                  onChange={(e) => void saveImageField('thumbnailLabel', e.target.files?.[0] ?? null)}
                 />
-                {form.thumbnailLabel ? <p className="mt-2 text-[11px] text-slate-400">{form.thumbnailLabel}</p> : null}
+                <p className="mt-2 text-[11px] text-slate-400">{summarizeStoredAsset(form.thumbnailLabel, 'No thumbnail selected')}</p>
+                {isStoredImageSource(form.thumbnailLabel) ? (
+                  <div className="relative mt-3 h-24 overflow-hidden rounded-xl border border-white/10">
+                    <Image src={form.thumbnailLabel} alt="Thumbnail preview" fill className="object-cover" unoptimized />
+                  </div>
+                ) : null}
               </label>
 
               <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm">

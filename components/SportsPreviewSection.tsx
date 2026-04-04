@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
-import { getAllMatches } from '@/lib/sports-data'
+import { useSportsMatches } from '@/hooks/useSportsMatches'
 import { useAuth } from '@/components/AuthProvider'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation } from '@/lib/translations'
@@ -14,11 +14,11 @@ export function SportsPreviewSection() {
   const router = useRouter()
   const { requireAuth } = useAuth()
   const { settings } = useAppSettings()
+  const { items: allMatches } = useSportsMatches()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const [leagueFilter, setLeagueFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState<'All' | 'Live' | 'Upcoming' | 'Final'>('All')
 
-  const allMatches = useMemo(() => getAllMatches(), [])
   const leagues = useMemo(() => ['All', ...Array.from(new Set(allMatches.map((match) => match.league)))], [allMatches])
 
   const filteredMatches = useMemo(() => {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createMockMoMoPayment } from '@/lib/payments/momo-mock'
 import type { CreatePaymentRequest, SubscriptionPlanId } from '@/lib/payments/types'
+import { getSessionTokenFromRequest, getUserBySessionToken } from '@/lib/server/auth-db'
+import { createPaymentInDb } from '@/lib/server/payments-db'
 
 function isE164(phone: string) {
   return /^\+[1-9]\d{7,14}$/.test(phone)
@@ -32,10 +33,16 @@ export async function POST(req: Request) {
   if (!isE164(phone)) return NextResponse.json({ error: 'Invalid phone. Use E.164 like +2507xxxxxxxx' }, { status: 400 })
   if (!isPlanId(planId)) return NextResponse.json({ error: 'Invalid planId' }, { status: 400 })
 
-  // NOTE: This is a MOCK integration until you add real MTN/Airtel MoMo merchant credentials.
   const amountRwf = planPricesRwf[planId]
   const paymentReq: CreatePaymentRequest = { provider: 'momo', phoneE164: phone, amountRwf, planId }
-  const payment = createMockMoMoPayment(paymentReq)
+  const sessionToken = getSessionTokenFromRequest(req)
+  const sessionUser = sessionToken ? await getUserBySessionToken(sessionToken) : null
+  const payment = await createPaymentInDb({
+    ...paymentReq,
+    userId: sessionUser?.id ?? null,
+  })
+
+  if (!payment) return NextResponse.json({ error: 'Unable to start payment' }, { status: 500 })
 
   return NextResponse.json({
     paymentId: payment.id,

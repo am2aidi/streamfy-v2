@@ -25,7 +25,7 @@ export default function AnimePage() {
 
           <div className="mb-5">
             <h1 className="text-white text-3xl font-bold">Anime</h1>
-            <p className="text-gray-400 text-sm mt-1">Animation, manga (prototype), and related entertainment.</p>
+            <p className="text-gray-400 text-sm mt-1">Animation, manga, and related entertainment.</p>
           </div>
 
           <div className="mb-6 flex flex-wrap gap-2">

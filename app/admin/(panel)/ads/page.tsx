@@ -1,42 +1,50 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
 
 type AdRow = {
+  id?: string
   banner: string
   advertiser: string
   placement: 'Home' | 'Movie' | 'Sport' | 'Music'
   start: string
   end: string
-  status: 'Active' | 'Paused'
+  status: 'Active' | 'Paused' | 'Completed'
   performance: string
 }
 
-const initialRows: AdRow[] = [
-  { banner: 'Nike Stream', advertiser: 'Nike', placement: 'Sport', start: '2026-03-01', end: '2026-03-31', status: 'Active', performance: '8.4% CTR' },
-  { banner: 'Cinema Plus', advertiser: 'CineMax', placement: 'Movie', start: '2026-03-02', end: '2026-04-01', status: 'Active', performance: '6.9% CTR' },
-  { banner: 'SoundGo', advertiser: 'SoundGo', placement: 'Home', start: '2026-02-15', end: '2026-03-15', status: 'Paused', performance: '5.2% CTR' },
-]
+const emptyForm: AdRow = {
+  banner: '',
+  advertiser: '',
+  placement: 'Home',
+  start: '2026-03-05',
+  end: '2026-04-05',
+  status: 'Active',
+  performance: '0.0% CTR',
+}
 
 export default function AdminAdsPage() {
   const { toast } = useToast()
-  const [rows, setRows] = useState<AdRow[]>(initialRows)
+  const [rows, setRows] = useState<AdRow[]>([])
   const [open, setOpen] = useState(false)
   const [editIndex, setEditIndex] = useState<number | null>(null)
-  const [form, setForm] = useState<AdRow>({
-    banner: '',
-    advertiser: '',
-    placement: 'Home',
-    start: '2026-03-05',
-    end: '2026-04-05',
-    status: 'Active',
-    performance: '0.0% CTR',
-  })
+  const [form, setForm] = useState<AdRow>(emptyForm)
+
+  const refresh = async () => {
+    const res = await fetch('/api/ads', { cache: 'no-store' })
+    if (!res.ok) throw new Error('Failed to load ads')
+    const data = (await res.json()) as { items: AdRow[] }
+    setRows(data.items)
+  }
+
+  useEffect(() => {
+    void refresh().catch(() => {})
+  }, [])
 
   const startAdd = () => {
     setEditIndex(null)
-    setForm({ banner: '', advertiser: '', placement: 'Home', start: '2026-03-05', end: '2026-04-05', status: 'Active', performance: '0.0% CTR' })
+    setForm(emptyForm)
     setOpen(true)
   }
 
@@ -46,7 +54,7 @@ export default function AdminAdsPage() {
     setOpen(true)
   }
 
-  const save = () => {
+  const save = async () => {
     if (!form.banner.trim() || !form.advertiser.trim()) {
       toast({ title: 'Missing data', description: 'Banner name and advertiser are required.' })
       return
@@ -55,20 +63,24 @@ export default function AdminAdsPage() {
       toast({ title: 'Invalid dates', description: 'End date must be after start date.' })
       return
     }
-    if (editIndex === null) {
-      setRows((prev) => [{ ...form, banner: form.banner.trim(), advertiser: form.advertiser.trim() }, ...prev])
-      toast({ title: 'Ad added', description: `${form.banner} campaign added.` })
-    } else {
-      setRows((prev) => prev.map((row, idx) => (idx === editIndex ? { ...form, banner: form.banner.trim(), advertiser: form.advertiser.trim() } : row)))
-      toast({ title: 'Ad updated', description: `${form.banner} campaign updated.` })
-    }
+
+    await fetch('/api/ads', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...form, id: form.id }),
+    })
+    await refresh()
+    toast({ title: editIndex === null ? 'Ad added' : 'Ad updated', description: `${form.banner} campaign saved.` })
     setOpen(false)
   }
 
-  const remove = (idx: number) => {
-    const name = rows[idx].banner
-    setRows((prev) => prev.filter((_, i) => i !== idx))
-    toast({ title: 'Ad deleted', description: `${name} removed.` })
+  const remove = async (idx: number) => {
+    const item = rows[idx]
+    if (item.id) {
+      await fetch(`/api/ads/${item.id}`, { method: 'DELETE' })
+      await refresh()
+    }
+    toast({ title: 'Ad deleted', description: `${item.banner} removed.` })
   }
 
   return (
@@ -101,7 +113,7 @@ export default function AdminAdsPage() {
             </thead>
             <tbody>
               {rows.map((row, idx) => (
-                <tr key={`${row.banner}-${idx}`} className="border-t border-white/10">
+                <tr key={row.id ?? `${row.banner}-${idx}`} className="border-t border-white/10">
                   <td className="px-4 py-3"><div className="h-10 w-20 rounded-lg bg-gradient-to-r from-[#f4a30a]/35 to-[#f4a30a]/20" /></td>
                   <td className="px-4 py-3">{row.advertiser}</td>
                   <td className="px-4 py-3 text-slate-300">{row.placement}</td>
@@ -109,7 +121,14 @@ export default function AdminAdsPage() {
                   <td className="px-4 py-3 text-slate-400">{row.end}</td>
                   <td className="px-4 py-3">
                     <button
-                      onClick={() => setRows((prev) => prev.map((item, i) => (i === idx ? { ...item, status: item.status === 'Active' ? 'Paused' : 'Active' } : item)))}
+                      onClick={() => {
+                        const nextStatus = row.status === 'Active' ? 'Paused' : 'Active'
+                        void fetch('/api/ads', {
+                          method: 'POST',
+                          headers: { 'content-type': 'application/json' },
+                          body: JSON.stringify({ ...row, status: nextStatus }),
+                        }).then(refresh)
+                      }}
                       className={`rounded-full px-2.5 py-1 text-xs ${row.status === 'Active' ? 'bg-[#f4a30a]/15 text-[#ffd089]' : 'bg-white/10 text-slate-300'}`}
                     >
                       {row.status}
@@ -119,7 +138,7 @@ export default function AdminAdsPage() {
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button onClick={() => startEdit(idx)} className="rounded-lg border border-[#f4a30a]/40 bg-[#f4a30a]/10 px-2.5 py-1 text-xs text-[#ffd089]">Edit</button>
-                      <button onClick={() => remove(idx)} className="rounded-lg border border-[#EF4444]/40 bg-[#EF4444]/10 px-2.5 py-1 text-xs text-[#fca5a5]">Delete</button>
+                      <button onClick={() => void remove(idx)} className="rounded-lg border border-[#EF4444]/40 bg-[#EF4444]/10 px-2.5 py-1 text-xs text-[#fca5a5]">Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -145,6 +164,7 @@ export default function AdminAdsPage() {
               <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as AdRow['status'] }))} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm">
                 <option>Active</option>
                 <option>Paused</option>
+                <option>Completed</option>
               </select>
               <input type="date" value={form.start} onChange={(e) => setForm((p) => ({ ...p, start: e.target.value }))} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
               <input type="date" value={form.end} onChange={(e) => setForm((p) => ({ ...p, end: e.target.value }))} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
@@ -152,7 +172,7 @@ export default function AdminAdsPage() {
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button onClick={() => setOpen(false)} className="rounded-xl border border-white/10 px-4 py-2 text-sm">Cancel</button>
-              <button onClick={save} className="rounded-xl bg-[#f4a30a] px-4 py-2 text-sm font-semibold text-black">Save</button>
+              <button onClick={() => void save()} className="rounded-xl bg-[#f4a30a] px-4 py-2 text-sm font-semibold text-black">Save</button>
             </div>
           </div>
         </div>

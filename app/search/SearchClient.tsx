@@ -6,18 +6,22 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Search as SearchIcon } from 'lucide-react'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
-import { movieCards } from '@/lib/movies-data'
-import { musicTracks } from '@/lib/music-data'
-import { getAllMatches } from '@/lib/sports-data'
-import { shortVideos } from '@/lib/shorts-data'
 import { useNewsItems } from '@/hooks/useNewsItems'
 import { useCommunity } from '@/hooks/useCommunity'
+import { useMovies } from '@/hooks/useMovies'
+import { useTracks } from '@/hooks/useTracks'
+import { useSportsMatches } from '@/hooks/useSportsMatches'
+import { useShorts } from '@/hooks/useShorts'
 
 export function SearchClient() {
   const router = useRouter()
   const params = useSearchParams()
   const qParam = params.get('q') ?? ''
   const [q, setQ] = useState(qParam)
+  const { items: movieItems } = useMovies()
+  const { items: trackItems } = useTracks()
+  const { items: matchItems } = useSportsMatches()
+  const { items: shortItems } = useShorts()
   const { items: newsItems } = useNewsItems()
   const { items: communityItems } = useCommunity()
 
@@ -25,23 +29,23 @@ export function SearchClient() {
 
   const movies = useMemo(() => {
     if (!query) return []
-    return movieCards.filter((m) => (m.title + ' ' + m.description + ' ' + m.genre).toLowerCase().includes(query)).slice(0, 20)
-  }, [query])
+    return movieItems.filter((m) => (m.title + ' ' + m.description + ' ' + m.genre).toLowerCase().includes(query)).slice(0, 20)
+  }, [movieItems, query])
 
   const tracks = useMemo(() => {
     if (!query) return []
-    return musicTracks.filter((t) => (t.title + ' ' + t.artist + ' ' + t.genre).toLowerCase().includes(query)).slice(0, 20)
-  }, [query])
+    return trackItems.filter((t) => (t.title + ' ' + t.artist + ' ' + t.genre).toLowerCase().includes(query)).slice(0, 20)
+  }, [query, trackItems])
 
   const matches = useMemo(() => {
     if (!query) return []
-    return getAllMatches().filter((m) => (m.league + ' ' + m.team1.name + ' ' + m.team2.name).toLowerCase().includes(query)).slice(0, 20)
-  }, [query])
+    return matchItems.filter((m) => (m.league + ' ' + m.team1.name + ' ' + m.team2.name).toLowerCase().includes(query)).slice(0, 20)
+  }, [matchItems, query])
 
   const shorts = useMemo(() => {
     if (!query) return []
-    return shortVideos.filter((s) => (s.title + ' ' + s.caption).toLowerCase().includes(query)).slice(0, 20)
-  }, [query])
+    return shortItems.filter((s) => (s.title + ' ' + s.caption).toLowerCase().includes(query)).slice(0, 20)
+  }, [query, shortItems])
 
   const news = useMemo(() => {
     if (!query) return []
@@ -126,7 +130,7 @@ export function SearchClient() {
                       key={m.id}
                       href={`/sports/${m.id}`}
                       title={`${m.team1.name} vs ${m.team2.name}`}
-                      meta={`${m.league} • ${m.date}`}
+                      meta={`${m.league} • ${m.time}`}
                     />
                   ))}
                 </ResultSection>
@@ -155,7 +159,6 @@ export function SearchClient() {
                   ))}
                 </ResultSection>
               ) : null}
-
             </div>
           )}
         </main>
@@ -181,4 +184,3 @@ function ResultItem({ href, title, meta }: { href: string; title: string; meta?:
     </Link>
   )
 }
-

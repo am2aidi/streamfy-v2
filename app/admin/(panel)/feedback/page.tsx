@@ -3,24 +3,22 @@
 import { useMemo } from 'react'
 import { MessageSquareText } from 'lucide-react'
 import { useChat } from '@/hooks/useChat'
-import { listPublicUsers } from '@/lib/users-store'
-import { getRoomThreadId, setChatMessages } from '@/lib/chat-store'
+import { getRoomThreadId } from '@/lib/chat-store'
 import { BRAND_NAME } from '@/lib/brand'
 
-const ROOM_ID = 'feedback'
+const ROOM_ID = 'room-feedback'
 
 export default function AdminFeedbackPage() {
-  const { messages } = useChat()
-  const users = useMemo(() => listPublicUsers(), [])
-  const nameFor = (id: string) => users.find((u) => u.id === id)?.name ?? id
+  const { messages, rooms, deleteMessage } = useChat(ROOM_ID)
 
   const feedback = useMemo(() => {
-    const tid = getRoomThreadId(ROOM_ID)
+    const room = rooms.find((item) => item.id === ROOM_ID)
+    const tid = getRoomThreadId(room?.slug ?? 'feedback')
     return messages
       .filter((m) => m.threadId === tid)
       .slice()
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [messages])
+  }, [messages, rooms])
 
   return (
     <div className="space-y-5">
@@ -49,12 +47,12 @@ export default function AdminFeedbackPage() {
             <tbody>
               {feedback.map((m) => (
                 <tr key={m.id} className="border-t border-white/10 align-top">
-                  <td className="px-4 py-3 text-white font-medium">{nameFor(m.fromUserId)}</td>
+                  <td className="px-4 py-3 text-white font-medium">{m.senderName || 'Anonymous user'}</td>
                   <td className="px-4 py-3 text-slate-200">{m.text}</td>
                   <td className="px-4 py-3 text-slate-300">{new Date(m.createdAt).toLocaleString()}</td>
                   <td className="px-4 py-3">
                     <button
-                      onClick={() => setChatMessages(messages.filter((x) => x.id !== m.id))}
+                      onClick={() => void deleteMessage(m.id)}
                       className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-200 hover:bg-red-500/15"
                     >
                       Delete

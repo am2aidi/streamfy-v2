@@ -1,3 +1,5 @@
+import('@opennextjs/cloudflare').then((m) => m.initOpenNextCloudflareForDev())
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Prevent Next from inferring the workspace root from lockfiles outside this repo.

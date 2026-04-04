@@ -1,17 +1,18 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import { Plus, Save, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import type { NewsCategory, NewsItem } from '@/lib/news-data'
-import { useNewsItems } from '@/hooks/useNewsItems'
 import { BRAND_NAME } from '@/lib/brand'
+import { fileToDataUrl, isStoredImageSource, summarizeStoredAsset } from '@/lib/file-data-url'
 
 type Row = NewsItem
 
 export default function AdminNewsPage() {
   const { toast } = useToast()
-  const { items: rows, setItems: setRows } = useNewsItems()
+  const [rows, setRows] = useState<Row[]>([])
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<'all' | NewsCategory>('all')
 
@@ -26,6 +27,17 @@ export default function AdminNewsPage() {
     url: '',
     videoUrl: '',
   })
+
+  const refreshRows = async () => {
+    const res = await fetch('/api/news', { cache: 'no-store' })
+    if (!res.ok) throw new Error('Failed to refresh news')
+    const data = (await res.json()) as { items: Row[] }
+    setRows(data.items)
+  }
+
+  useEffect(() => {
+    void refreshRows().catch(() => {})
+  }, [])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -50,7 +62,7 @@ export default function AdminNewsPage() {
     })
   }
 
-  const save = () => {
+  const save = async () => {
     if (!form.title.trim()) {
       toast({ title: 'Missing title', description: 'News title is required.' })
       return
@@ -59,8 +71,8 @@ export default function AdminNewsPage() {
       toast({ title: 'Missing summary', description: 'News summary is required.' })
       return
     }
-    const nextRow: Row = {
-      id: form.id ?? `news-${Date.now()}`,
+    const nextRow = {
+      ...(form.id ? { id: form.id } : {}),
       title: form.title.trim(),
       category: form.category,
       summary: form.summary.trim(),
@@ -71,21 +83,35 @@ export default function AdminNewsPage() {
       url: form.url?.trim() || undefined,
       videoUrl: form.videoUrl?.trim() || undefined,
     }
-    setRows((prev) => {
-      const idx = prev.findIndex((x) => x.id === nextRow.id)
-      if (idx === -1) return [nextRow, ...prev]
-      return prev.map((x) => (x.id === nextRow.id ? nextRow : x))
+
+    await fetch('/api/news', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(nextRow),
     })
+    await refreshRows()
     toast({ title: form.id ? 'News updated' : 'News created', description: nextRow.title })
     startNew()
   }
 
   const edit = (row: Row) => setForm({ ...row })
 
-  const remove = (id: string) => {
-    setRows((prev) => prev.filter((x) => x.id !== id))
+  const remove = async (id: string) => {
+    await fetch(`/api/news/${id}`, { method: 'DELETE' })
+    await refreshRows()
     toast({ title: 'Deleted', description: 'News item removed.' })
     if (form.id === id) startNew()
+  }
+
+  const saveImageFile = async (file: File | null) => {
+    if (!file) return
+    try {
+      const dataUrl = await fileToDataUrl(file)
+      setForm((prev) => ({ ...prev, image: dataUrl }))
+      toast({ title: 'Image saved', description: `${file.name} will be stored in the database.` })
+    } catch {
+      toast({ title: 'Upload failed', description: 'We could not read that image file.' })
+    }
   }
 
   return (
@@ -215,9 +241,19 @@ export default function AdminNewsPage() {
             <input
               value={form.image}
               onChange={(e) => setForm((p) => ({ ...p, image: e.target.value }))}
-              placeholder="Image URL"
+              placeholder="Image URL or use the upload below"
               className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none"
             />
+            <div className="rounded-xl border border-dashed border-white/20 bg-black/20 px-3 py-4 text-xs text-slate-300">
+              <span>Upload article image</span>
+              <input type="file" accept="image/*" className="mt-2 block text-xs" onChange={(e) => void saveImageFile(e.target.files?.[0] ?? null)} />
+              <p className="mt-2 text-[11px] text-slate-400">{summarizeStoredAsset(form.image, 'No image selected')}</p>
+              {isStoredImageSource(form.image) ? (
+                <div className="relative mt-3 h-32 overflow-hidden rounded-xl border border-white/10">
+                  <Image src={form.image} alt="News image preview" fill className="object-cover" unoptimized />
+                </div>
+              ) : null}
+            </div>
             <input
               value={form.videoUrl ?? ''}
               onChange={(e) => setForm((p) => ({ ...p, videoUrl: e.target.value }))}

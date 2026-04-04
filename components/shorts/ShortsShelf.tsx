@@ -3,11 +3,13 @@
 import Link from 'next/link'
 import { useMemo } from 'react'
 import { ChevronRight } from 'lucide-react'
-import { shortVideos, type ShortsCategory } from '@/lib/shorts-data'
+import type { ShortsCategory } from '@/lib/shorts-data'
 import { ShortPreviewCard } from '@/components/shorts/ShortPreviewCard'
+import { useShorts } from '@/hooks/useShorts'
 
 export function ShortsShelf({ title, subtitle, category, limit = 4 }: { title: string; subtitle?: string; category: ShortsCategory; limit?: number }) {
-  const items = useMemo(() => shortVideos.filter((s) => s.category === category).slice(0, limit), [category, limit])
+  const { items: shorts } = useShorts()
+  const items = useMemo(() => shorts.filter((s) => s.category === category).slice(0, limit), [category, limit, shorts])
   if (!items.length) return null
 
   return (

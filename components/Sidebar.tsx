@@ -11,7 +11,6 @@ import { StreamfyLogo } from '@/components/StreamfyLogo'
 import { BRAND_NAME } from '@/lib/brand'
 import { getTranslation } from '@/lib/translations'
 import { useToast } from '@/hooks/use-toast'
-import { getUserByEmail, getUserById } from '@/lib/users-store'
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -19,11 +18,10 @@ export function Sidebar() {
   const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
-  const isAdminUser = useMemo(() => {
-    if (!isAuthenticated || !user) return false
-    const storedUser = (user.id ? getUserById(user.id) : null) ?? (user.email ? getUserByEmail(user.email) : null)
-    return storedUser?.role === 'admin' && storedUser?.status !== 'blocked'
-  }, [isAuthenticated, user])
+  const isAdminUser = useMemo(
+    () => Boolean(isAuthenticated && user?.role === 'admin' && user?.status !== 'blocked' && user?.status !== 'deleted'),
+    [isAuthenticated, user],
+  )
 
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href))
 

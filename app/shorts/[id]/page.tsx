@@ -8,20 +8,25 @@ import { ChevronLeft, Heart, Play } from 'lucide-react'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { useAppSettings } from '@/components/AppSettingsProvider'
-import { getShortById, shortVideos } from '@/lib/shorts-data'
+import { useShorts } from '@/hooks/useShorts'
 
 export default function ShortDetailPage() {
   const params = useParams<{ id: string }>()
-  const short = useMemo(() => getShortById(params.id), [params.id])
+  const { items, loaded } = useShorts()
+  const short = useMemo(() => items.find((item) => item.id === params.id) ?? null, [items, params.id])
   const { settings, updateSetting } = useAppSettings()
   const [showPlayer, setShowPlayer] = useState(false)
+
+  if (!short && !loaded) {
+    return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading short...</div>
+  }
 
   if (!short) {
     return <div className="min-h-screen bg-black text-white flex items-center justify-center">Short not found</div>
   }
 
   const saved = settings.watchlistShorts.includes(short.id)
-  const related = shortVideos.filter((s) => s.category === short.category && s.id !== short.id).slice(0, 6)
+  const related = items.filter((s) => s.category === short.category && s.id !== short.id).slice(0, 6)
 
   return (
     <div className="flex min-h-screen bg-black">
@@ -108,8 +113,8 @@ export default function ShortDetailPage() {
                 ) : (
                   <div className="aspect-video rounded-xl bg-black/80 border border-white/10 flex flex-col items-center justify-center gap-2">
                     <Play size={28} className="text-[#f4a30a]" />
-                    <p className="text-white text-sm">Playing short (prototype)</p>
-                    <p className="text-gray-400 text-xs">Wire this to your real reels player when ready.</p>
+                    <p className="text-white text-sm">Short video is not available yet.</p>
+                    <p className="text-gray-400 text-xs">Add a video link in admin to play this short here.</p>
                   </div>
                 )}
                 <div className="mt-4 flex justify-end">

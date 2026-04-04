@@ -7,17 +7,18 @@ import Image from 'next/image'
 import { Download, ChevronLeft, Heart, Languages, Maximize2, Play, Volume2 } from 'lucide-react'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
-import { getMovieById, movieCards } from '@/lib/movies-data'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/components/AuthProvider'
 import { SocialShareLinks } from '@/components/SocialShareLinks'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation, type Language } from '@/lib/translations'
 import { DownloadOptionsModal } from '@/components/download/DownloadOptionsModal'
+import { useMovies } from '@/hooks/useMovies'
 
 export default function MovieDetailPage() {
   const params = useParams<{ id: string }>()
-  const movie = useMemo(() => getMovieById(params.id), [params.id])
+  const { items, loaded } = useMovies()
+  const movie = useMemo(() => items.find((item) => item.id === params.id) ?? null, [items, params.id])
   const { toast } = useToast()
   const { requireAuth } = useAuth()
   const { settings, updateSetting } = useAppSettings()
@@ -29,6 +30,10 @@ export default function MovieDetailPage() {
   const [volume, setVolume] = useState(80)
   const [progress, setProgress] = useState(38)
   const inWatchlist = movie ? settings.watchlistMovies.includes(movie.id) : false
+
+  if (!movie && !loaded) {
+    return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading movie...</div>
+  }
 
   if (!movie) {
     return (
@@ -100,9 +105,9 @@ export default function MovieDetailPage() {
           </div>
 
           <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <MiniRow title={t('continueWatching')} items={movieCards.slice(0, 3).map((m) => m.title)} />
-            <MiniRow title={t('recentlyWatched')} items={movieCards.slice().reverse().map((m) => m.title)} />
-            <MiniRow title={t('recommendedForYou')} items={movieCards.map((m) => m.title)} />
+            <MiniRow title={t('continueWatching')} items={items.slice(0, 3).map((m) => m.title)} />
+            <MiniRow title={t('recentlyWatched')} items={items.slice().reverse().map((m) => m.title)} />
+            <MiniRow title={t('recommendedForYou')} items={items.map((m) => m.title)} />
           </section>
 
           {showWatch && (

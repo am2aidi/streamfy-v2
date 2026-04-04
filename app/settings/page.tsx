@@ -31,9 +31,12 @@ import {
 import { Header } from '@/components/Header'
 import { Sidebar } from '@/components/Sidebar'
 import { accentThemePresets, useAppSettings, type AccentTheme } from '@/components/AppSettingsProvider'
+import { useAuth } from '@/components/AuthProvider'
+import { authHeaders, patchStoredAuthUser } from '@/lib/auth-client'
 import { getTranslation, languages, type TranslationKey } from '@/lib/translations'
 import { SocialShareLinks } from '@/components/SocialShareLinks'
 import { BRAND_NAME } from '@/lib/brand'
+import { useToast } from '@/hooks/use-toast'
 
 type TabId = 'profile' | 'security' | 'preferences' | 'social' | 'subscription'
 
@@ -63,7 +66,7 @@ const planIcons: Record<SubscriptionPlanIcon, ComponentType<{ size?: number; cla
   CreditCard,
 }
 
-const paymentMethods = [
+const fallbackPaymentMethods = [
   { id: 'rw-mtn-airtel', title: 'MTN | Airtel Rwanda', desc: 'Koresha MTN cyangwa Airtel Mobile Money muri RWANDA', flag: '🇷🇼' },
   { id: 'visa-mastercard', title: 'VISA & MasterCard', desc: 'Koresha ikarita ya bank: VISA / MasterCard', flag: '💳' },
   { id: 'ug-mtn-airtel', title: 'MTN | Airtel Uganda', desc: 'Koresha MTN Uganda cyangwa Airtel Uganda', flag: '🇺🇬' },
@@ -80,6 +83,8 @@ const inputClass =
 
 export default function SettingsPage() {
   const { settings, updateSetting } = useAppSettings()
+  const { user } = useAuth()
+  const { toast } = useToast()
   const t = (key: TranslationKey) => getTranslation(settings.language, key)
   const [activeTab, setActiveTab] = useState<TabId>('profile')
   const [showPayment, setShowPayment] = useState(false)
@@ -88,6 +93,9 @@ export default function SettingsPage() {
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'starting' | 'pending' | 'succeeded' | 'failed'>('idle')
   const [publicProfile, setPublicProfile] = useState(true)
   const [remotePlans, setRemotePlans] = useState<SubscriptionPlan[] | null>(null)
+  const [remotePaymentMethods, setRemotePaymentMethods] = useState<
+    Array<{ id: string; title: string; desc: string; flag: string }>
+  >([])
   const [profileData, setProfileData] = useState({
     fullName: `${BRAND_NAME} User`,
     username: 'streamfyuser',
@@ -111,6 +119,61 @@ export default function SettingsPage() {
     const normalized = profileData.phone.replace(/\s+/g, '')
     if (normalized.startsWith('+')) setPayPhone(normalized)
   }, [profileData.phone])
+
+  useEffect(() => {
+    if (!user) return
+    setProfileData((prev) => ({
+      ...prev,
+      fullName: user.name || prev.fullName,
+      username: user.username || prev.username,
+      email: user.email || prev.email,
+      phone: user.phone || prev.phone,
+    }))
+  }, [user])
+
+  useEffect(() => {
+    const session = authHeaders()
+    if (!session['x-session-token']) return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/user/profile', {
+          cache: 'no-store',
+          headers: {
+            ...session,
+          },
+        })
+        if (!res.ok) return
+        const data = (await res.json()) as {
+          profile?: {
+            fullName?: string
+            username?: string
+            email?: string
+            phone?: string
+            bio?: string
+            publicProfile?: boolean
+          }
+        }
+        if (cancelled || !data.profile) return
+        setProfileData((prev) => ({
+          ...prev,
+          fullName: data.profile?.fullName || prev.fullName,
+          username: data.profile?.username || prev.username,
+          email: data.profile?.email || prev.email,
+          phone: data.profile?.phone || prev.phone,
+          bio: data.profile?.bio || prev.bio,
+        }))
+        setPublicProfile(data.profile.publicProfile !== false)
+      } catch {
+        // ignore
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const fallbackPlans: SubscriptionPlan[] = [
     { id: 'movie', label: t('planMovieLabel'), priceRwf: 100, desc: t('planMovieDesc'), icon: 'Star', popular: false },
@@ -141,7 +204,39 @@ export default function SettingsPage() {
     }
   }, [settings.language])
 
+  useEffect(() => {
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const res = await fetch('/api/admin/settings', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = (await res.json()) as {
+          paymentMethods?: Array<{ id: string; label: string; enabled: boolean; feePercent: number }>
+        }
+        if (cancelled || !data.paymentMethods) return
+        setRemotePaymentMethods(
+          data.paymentMethods
+            .filter((method) => method.enabled)
+            .map((method) => ({
+              id: method.id,
+              title: method.label,
+              desc: method.feePercent > 0 ? `Fee: ${method.feePercent}%` : 'No extra fee',
+              flag: '💳',
+            })),
+        )
+      } catch {
+        // keep fallback methods
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const plans = remotePlans ?? fallbackPlans
+  const paymentMethods = remotePaymentMethods.length ? remotePaymentMethods : fallbackPaymentMethods
   const selectedPlanData = plans.find((p) => p.id === (settings.subscriptionPlan as SubscriptionPlanId)) ?? plans[0]
 
   const initiateMoMoPayment = async () => {
@@ -150,7 +245,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch('/api/payments/momo/initiate', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           phone: payPhone,
           amountRwf: selectedPlanData.priceRwf,
@@ -164,6 +259,43 @@ export default function SettingsPage() {
     } catch {
       setPaymentStatus('failed')
     }
+  }
+
+  const saveProfile = async () => {
+    const headers = authHeaders()
+    if (!headers['x-session-token']) {
+      toast({ title: 'Sign in required', description: 'Please sign in first.' })
+      return
+    }
+
+    const res = await fetch('/api/user/profile', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({
+        fullName: profileData.fullName,
+        username: profileData.username,
+        email: profileData.email,
+        phone: profileData.phone,
+        bio: profileData.bio,
+        publicProfile,
+      }),
+    }).catch(() => null)
+
+    if (!res?.ok) {
+      toast({ title: 'Save failed', description: 'Could not update your profile.' })
+      return
+    }
+
+    patchStoredAuthUser({
+      name: profileData.fullName,
+      username: profileData.username,
+      email: profileData.email,
+      phone: profileData.phone,
+    })
+    toast({ title: 'Profile saved', description: 'Your account details were updated.' })
   }
 
   useEffect(() => {
@@ -255,7 +387,7 @@ export default function SettingsPage() {
                     rows={4}
                   />
                 </div>
-                <button className="rounded-xl bg-[#f4a30a] py-3 text-sm font-bold text-black">Save Changes</button>
+                <button onClick={() => void saveProfile()} className="rounded-xl bg-[#f4a30a] py-3 text-sm font-bold text-black">Save Changes</button>
               </SettingsCard>
 
               <SettingsCard icon={Camera} title="Profile Photo" description="Upload and manage your profile picture">
@@ -508,7 +640,7 @@ export default function SettingsPage() {
                           onClick={async () => {
                             await fetch('/api/payments/momo/mock/approve', {
                               method: 'POST',
-                              headers: { 'content-type': 'application/json' },
+                              headers: { 'content-type': 'application/json', ...authHeaders() },
                               body: JSON.stringify({ paymentId }),
                             })
                           }}

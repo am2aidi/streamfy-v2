@@ -4,14 +4,15 @@ import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { MoviesSection } from '@/components/MoviesSection'
 import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
-import { shortVideos } from '@/lib/shorts-data'
 import Link from 'next/link'
 import { NewsFeed } from '@/components/NewsFeed'
 import { useNewsItems } from '@/hooks/useNewsItems'
 import { ShortPreviewCard } from '@/components/shorts/ShortPreviewCard'
+import { useShorts } from '@/hooks/useShorts'
 
 export default function MoviesPage() {
-  const movieShorts = shortVideos.filter((s) => s.category === 'movies').slice(0, 6)
+  const { items: shorts } = useShorts()
+  const movieShorts = shorts.filter((s) => s.category === 'movies').slice(0, 6)
   const { byCategory } = useNewsItems()
   const movieNews = byCategory('movies')
 

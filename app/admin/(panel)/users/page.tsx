@@ -1,16 +1,23 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '@/components/AuthProvider'
+import { patchStoredAuthUser } from '@/lib/auth-client'
 import { useToast } from '@/hooks/use-toast'
-import {
-  countActiveAdmins,
-  getAdminSession,
-  listManagedUsers,
-  setUserRole,
-  setUserStatus,
-  subscribeToUsers,
-  upsertAdminUser,
-} from '@/lib/users-store'
+
+type ManagedUser = {
+  id: string
+  initials: string
+  name: string
+  username: string
+  email: string
+  role: 'Admin' | 'User'
+  roleKey: 'admin' | 'user'
+  joinDate: string
+  status: 'Active' | 'Blocked'
+  statusKey: 'active' | 'blocked'
+  provider: string
+}
 
 type AdminDraft = {
   name: string
@@ -28,79 +35,129 @@ const defaultDraft: AdminDraft = {
 
 export default function AdminUsersPage() {
   const { toast } = useToast()
-  const [users, setUsers] = useState(() => listManagedUsers())
+  const { user } = useAuth()
+  const [users, setUsers] = useState<ManagedUser[]>([])
+  const [loaded, setLoaded] = useState(false)
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'All' | 'Admin' | 'User'>('All')
   const [draft, setDraft] = useState<AdminDraft>(defaultDraft)
 
-  useEffect(() => {
-    const syncUsers = () => setUsers(listManagedUsers())
-    syncUsers()
-    return subscribeToUsers(syncUsers)
-  }, [])
+  const refreshUsers = async () => {
+    const res = await fetch('/api/users', { cache: 'no-store' })
+    if (!res.ok) throw new Error('Failed to load users')
+    const data = (await res.json()) as { items: ManagedUser[] }
+    setUsers(data.items)
+  }
 
-  const currentAdminId = getAdminSession()?.id ?? null
+  useEffect(() => {
+    void refreshUsers()
+      .catch(() => {
+        toast({ title: 'Users unavailable', description: 'Could not load users from the database.' })
+      })
+      .finally(() => setLoaded(true))
+  }, [toast])
+
+  const currentAdminId = user?.id ?? null
 
   const filtered = useMemo(() => {
-    return users.filter((user) => {
-      const byRole = roleFilter === 'All' || user.role === roleFilter
+    return users.filter((entry) => {
+      const byRole = roleFilter === 'All' || entry.role === roleFilter
       const q = query.trim().toLowerCase()
       const byQuery =
         !q ||
-        user.username.toLowerCase().includes(q) ||
-        user.email.toLowerCase().includes(q) ||
-        user.name.toLowerCase().includes(q)
+        entry.username.toLowerCase().includes(q) ||
+        entry.email.toLowerCase().includes(q) ||
+        entry.name.toLowerCase().includes(q)
       return byRole && byQuery
     })
   }, [query, roleFilter, users])
 
-  const createAdmin = () => {
+  const activeAdminCount = users.filter((entry) => entry.roleKey === 'admin' && entry.statusKey === 'active').length
+
+  const createAdmin = async () => {
     if (!draft.email.trim() || !draft.password.trim()) {
       toast({ title: 'Missing details', description: 'Email and password are required for a new admin.' })
       return
     }
 
-    const created = upsertAdminUser({
-      name: draft.name,
-      username: draft.username,
-      email: draft.email,
-      password: draft.password,
+    const res = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(draft),
     })
 
+    if (!res.ok) {
+      toast({ title: 'Save failed', description: 'Could not create the admin account.' })
+      return
+    }
+
+    await refreshUsers()
     setDraft(defaultDraft)
     toast({
       title: 'Admin ready',
-      description: `${created.email} can now sign in to /admin.`,
+      description: `${draft.email.trim().toLowerCase()} can now sign in to /admin.`,
     })
   }
 
-  const toggleStatus = (userId: string) => {
-    const user = users.find((entry) => entry.id === userId)
-    if (!user) return
-    if (user.roleKey === 'admin' && user.statusKey === 'active' && countActiveAdmins() <= 1) {
+  const toggleStatus = async (userId: string) => {
+    const entry = users.find((candidate) => candidate.id === userId)
+    if (!entry) return
+    if (entry.roleKey === 'admin' && entry.statusKey === 'active' && activeAdminCount <= 1) {
       toast({ title: 'Action blocked', description: 'Keep at least one active admin account available.' })
       return
     }
 
-    setUserStatus(userId, user.statusKey === 'active' ? 'blocked' : 'active')
+    const nextStatus = entry.statusKey === 'active' ? 'blocked' : 'active'
+    const res = await fetch(`/api/users/${userId}/status`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status: nextStatus }),
+    })
+
+    if (!res.ok) {
+      toast({ title: 'Update failed', description: 'Could not update the user status.' })
+      return
+    }
+
+    if (userId === currentAdminId) {
+      patchStoredAuthUser({ status: nextStatus })
+    }
+
+    await refreshUsers()
     toast({
-      title: user.statusKey === 'active' ? 'User blocked' : 'User activated',
-      description: `${user.email} was ${user.statusKey === 'active' ? 'blocked' : 'activated'}.`,
+      title: nextStatus === 'blocked' ? 'User blocked' : 'User activated',
+      description: `${entry.email} was ${nextStatus === 'blocked' ? 'blocked' : 'activated'}.`,
     })
   }
 
-  const toggleRole = (userId: string) => {
-    const user = users.find((entry) => entry.id === userId)
-    if (!user) return
-    if (user.roleKey === 'admin' && user.statusKey === 'active' && countActiveAdmins() <= 1) {
+  const toggleRole = async (userId: string) => {
+    const entry = users.find((candidate) => candidate.id === userId)
+    if (!entry) return
+    if (entry.roleKey === 'admin' && entry.statusKey === 'active' && activeAdminCount <= 1) {
       toast({ title: 'Action blocked', description: 'You need at least one active admin.' })
       return
     }
 
-    setUserRole(userId, user.roleKey === 'admin' ? 'user' : 'admin')
+    const nextRole = entry.roleKey === 'admin' ? 'user' : 'admin'
+    const res = await fetch(`/api/users/${userId}/role`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ role: nextRole }),
+    })
+
+    if (!res.ok) {
+      toast({ title: 'Update failed', description: 'Could not update the user role.' })
+      return
+    }
+
+    if (userId === currentAdminId) {
+      patchStoredAuthUser({ role: nextRole })
+    }
+
+    await refreshUsers()
     toast({
-      title: user.roleKey === 'admin' ? 'Admin removed' : 'Admin granted',
-      description: `${user.email} is now ${user.roleKey === 'admin' ? 'a user' : 'an admin'}.`,
+      title: nextRole === 'admin' ? 'Admin granted' : 'Admin removed',
+      description: `${entry.email} is now ${nextRole === 'admin' ? 'an admin' : 'a user'}.`,
     })
   }
 
@@ -128,7 +185,7 @@ export default function AdminUsersPage() {
               <option value="User">User</option>
             </select>
             <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-slate-300">
-              {users.filter((user) => user.roleKey === 'admin').length} admin account(s)
+              {users.filter((entry) => entry.roleKey === 'admin').length} admin account(s)
             </div>
           </div>
         </section>
@@ -164,7 +221,7 @@ export default function AdminUsersPage() {
               className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm"
             />
             <button
-              onClick={createAdmin}
+              onClick={() => void createAdmin()}
               className="rounded-xl px-4 py-2.5 text-sm font-semibold text-black"
               style={{ background: 'linear-gradient(to right, var(--admin-accent-a), var(--admin-accent-b))' }}
             >
@@ -190,45 +247,77 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((user) => (
-                <tr key={user.id} className="border-t border-white/10">
+              {!loaded ? (
+                <tr className="border-t border-white/10">
+                  <td className="px-4 py-6 text-slate-400" colSpan={8}>
+                    Loading users...
+                  </td>
+                </tr>
+              ) : null}
+              {loaded && filtered.map((entry) => (
+                <tr key={entry.id} className="border-t border-white/10">
                   <td className="px-4 py-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-black" style={{ background: 'linear-gradient(to bottom right, var(--admin-accent-a), var(--admin-accent-b))' }}>
-                      {user.initials}
+                    <div
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-black"
+                      style={{ background: 'linear-gradient(to bottom right, var(--admin-accent-a), var(--admin-accent-b))' }}
+                    >
+                      {entry.initials}
                     </div>
                   </td>
                   <td className="px-4 py-3 font-medium text-white">
-                    {user.name}
-                    {user.id === currentAdminId ? <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-slate-300">You</span> : null}
+                    {entry.name}
+                    {entry.id === currentAdminId ? (
+                      <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-slate-300">
+                        You
+                      </span>
+                    ) : null}
                   </td>
-                  <td className="px-4 py-3">{user.username}</td>
-                  <td className="px-4 py-3 text-slate-300">{user.email}</td>
-                  <td className="px-4 py-3 text-slate-300">{user.role}</td>
-                  <td className="px-4 py-3 text-slate-400">{user.joinDate}</td>
+                  <td className="px-4 py-3">{entry.username}</td>
+                  <td className="px-4 py-3 text-slate-300">{entry.email}</td>
+                  <td className="px-4 py-3 text-slate-300">{entry.role}</td>
+                  <td className="px-4 py-3 text-slate-400">{entry.joinDate}</td>
                   <td className="px-4 py-3">
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs ${user.statusKey === 'active' ? '' : 'bg-[#EF4444]/15 text-[#fca5a5]'}`}
-                      style={user.statusKey === 'active' ? { background: 'color-mix(in oklab, var(--admin-accent-a) 15%, transparent)', color: 'var(--admin-accent-a)' } : undefined}
+                      className={`rounded-full px-2.5 py-1 text-xs ${entry.statusKey === 'active' ? '' : 'bg-[#EF4444]/15 text-[#fca5a5]'}`}
+                      style={
+                        entry.statusKey === 'active'
+                          ? { background: 'color-mix(in oklab, var(--admin-accent-a) 15%, transparent)', color: 'var(--admin-accent-a)' }
+                          : undefined
+                      }
                     >
-                      {user.status}
+                      {entry.status}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button
-                        onClick={() => toggleRole(user.id)}
+                        onClick={() => void toggleRole(entry.id)}
                         className="rounded-lg border px-2.5 py-1 text-xs"
-                        style={{ borderColor: 'color-mix(in oklab, var(--admin-accent-a) 40%, transparent)', background: 'color-mix(in oklab, var(--admin-accent-a) 10%, transparent)', color: 'var(--admin-accent-a)' }}
+                        style={{
+                          borderColor: 'color-mix(in oklab, var(--admin-accent-a) 40%, transparent)',
+                          background: 'color-mix(in oklab, var(--admin-accent-a) 10%, transparent)',
+                          color: 'var(--admin-accent-a)',
+                        }}
                       >
-                        Make {user.roleKey === 'admin' ? 'User' : 'Admin'}
+                        Make {entry.roleKey === 'admin' ? 'User' : 'Admin'}
                       </button>
-                      <button onClick={() => toggleStatus(user.id)} className="rounded-lg border border-[#EF4444]/40 bg-[#EF4444]/10 px-2.5 py-1 text-xs text-[#fca5a5]">
-                        {user.statusKey === 'active' ? 'Block' : 'Activate'}
+                      <button
+                        onClick={() => void toggleStatus(entry.id)}
+                        className="rounded-lg border border-[#EF4444]/40 bg-[#EF4444]/10 px-2.5 py-1 text-xs text-[#fca5a5]"
+                      >
+                        {entry.statusKey === 'active' ? 'Block' : 'Activate'}
                       </button>
                     </div>
                   </td>
                 </tr>
               ))}
+              {loaded && filtered.length === 0 ? (
+                <tr className="border-t border-white/10">
+                  <td className="px-4 py-6 text-slate-400" colSpan={8}>
+                    No users match your filters.
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>

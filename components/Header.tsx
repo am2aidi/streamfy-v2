@@ -11,7 +11,6 @@ import { useToast } from '@/hooks/use-toast'
 import { LiveMomentsBanner } from '@/components/LiveMomentsBanner'
 import { StreamfyLogo } from '@/components/StreamfyLogo'
 import { BRAND_NAME } from '@/lib/brand'
-import { getUserByEmail, getUserById } from '@/lib/users-store'
 
 export function Header() {
   const router = useRouter()
@@ -25,11 +24,10 @@ export function Header() {
     () => languages.find((l) => l.code === settings.language)?.name ?? 'English',
     [settings.language]
   )
-  const isAdminUser = useMemo(() => {
-    if (!isAuthenticated || !user) return false
-    const storedUser = (user.id ? getUserById(user.id) : null) ?? (user.email ? getUserByEmail(user.email) : null)
-    return storedUser?.role === 'admin' && storedUser?.status !== 'blocked'
-  }, [isAuthenticated, user])
+  const isAdminUser = useMemo(
+    () => Boolean(isAuthenticated && user?.role === 'admin' && user?.status !== 'blocked' && user?.status !== 'deleted'),
+    [isAuthenticated, user],
+  )
   const showCompactBanner = !['/', '/movies', '/music', '/sports'].includes(pathname)
   const notificationCount = 3
 

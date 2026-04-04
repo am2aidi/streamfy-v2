@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react'
 import { CheckCircle2, Search, Trash2, XCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useCommunity } from '@/hooks/useCommunity'
-import { listPublicUsers } from '@/lib/users-store'
 import type { CommunityStatus } from '@/lib/community-store'
 
 export default function AdminCommunityPage() {
@@ -12,11 +11,6 @@ export default function AdminCommunityPage() {
   const community = useCommunity()
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<'all' | CommunityStatus>('all')
-
-  const users = useMemo(() => listPublicUsers(), [])
-  const userFor = (id: string) => users.find((u) => u.id === id)
-  const nameFor = (id: string) => userFor(id)?.name ?? id
-  const emailFor = (id: string) => userFor(id)?.email ?? ''
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -85,7 +79,8 @@ export default function AdminCommunityPage() {
             <tbody>
               {filtered.map((i) => {
                 const stats = community.statsFor(i.id)
-                const uploaderEmail = emailFor(i.createdBy)
+                const uploaderName = i.createdByName ?? i.createdBy
+                const uploaderEmail = i.createdByEmail ?? ''
                 return (
                   <tr key={i.id} className="border-t border-white/10">
                     <td className="px-4 py-3 text-white font-medium">{i.title}</td>
@@ -95,7 +90,7 @@ export default function AdminCommunityPage() {
                     <td className="px-4 py-3 text-slate-300">{stats.likeCount}</td>
                     <td className="px-4 py-3 text-slate-300">
                       <div className="flex flex-col">
-                        <span>{nameFor(i.createdBy)}</span>
+                        <span>{uploaderName}</span>
                         {uploaderEmail ? <span className="text-xs text-slate-400">{uploaderEmail}</span> : null}
                       </div>
                     </td>

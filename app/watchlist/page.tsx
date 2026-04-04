@@ -6,38 +6,36 @@ import Image from 'next/image'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { useAppSettings } from '@/components/AppSettingsProvider'
-import { movieCards } from '@/lib/movies-data'
-import { musicTracks } from '@/lib/music-data'
-import { getMatchById } from '@/lib/sports-data'
-import { getShortById } from '@/lib/shorts-data'
+import { useMovies } from '@/hooks/useMovies'
+import { useTracks } from '@/hooks/useTracks'
+import { useSportsMatches } from '@/hooks/useSportsMatches'
+import { useShorts } from '@/hooks/useShorts'
 
 type Tab = 'all' | 'movies' | 'music' | 'sports' | 'shorts'
 
 export default function WatchlistPage() {
   const { settings, updateSetting } = useAppSettings()
+  const { items: movieItems } = useMovies()
+  const { items: trackItems } = useTracks()
+  const { items: matchItems } = useSportsMatches()
+  const { items: shortItems } = useShorts()
   const [tab, setTab] = useState<Tab>('all')
 
   const movies = useMemo(
-    () => movieCards.filter((m) => settings.watchlistMovies.includes(m.id)),
-    [settings.watchlistMovies]
+    () => movieItems.filter((m) => settings.watchlistMovies.includes(m.id)),
+    [movieItems, settings.watchlistMovies]
   )
   const tracks = useMemo(
-    () => musicTracks.filter((t) => settings.watchlistTracks.includes(t.id)),
-    [settings.watchlistTracks]
+    () => trackItems.filter((t) => settings.watchlistTracks.includes(t.id)),
+    [settings.watchlistTracks, trackItems]
   )
   const matches = useMemo(
-    () =>
-      settings.watchlistMatches
-        .map((id) => getMatchById(id))
-        .filter((match): match is NonNullable<ReturnType<typeof getMatchById>> => match !== null),
-    [settings.watchlistMatches]
+    () => matchItems.filter((match) => settings.watchlistMatches.includes(match.id)),
+    [matchItems, settings.watchlistMatches]
   )
   const shorts = useMemo(
-    () =>
-      settings.watchlistShorts
-        .map((id) => getShortById(id))
-        .filter((short): short is NonNullable<ReturnType<typeof getShortById>> => short !== null),
-    [settings.watchlistShorts]
+    () => shortItems.filter((short) => settings.watchlistShorts.includes(short.id)),
+    [settings.watchlistShorts, shortItems]
   )
 
   const isEmpty = movies.length === 0 && tracks.length === 0 && matches.length === 0 && shorts.length === 0

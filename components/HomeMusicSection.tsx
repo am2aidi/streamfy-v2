@@ -4,29 +4,29 @@ import { useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronRight, Play, Plus } from 'lucide-react'
-import { musicTracks } from '@/lib/music-data'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/hooks/use-toast'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { getTranslation } from '@/lib/translations'
+import { useTracks } from '@/hooks/useTracks'
 
 const categories = ['New Music', 'Rap', 'Pop', 'Featured Albums', 'Trending']
 
 export function HomeMusicSection() {
   const { requireAuth } = useAuth()
   const { toast } = useToast()
-  const { settings } = useAppSettings()
+  const { settings, updateSetting } = useAppSettings()
+  const { items: tracks } = useTracks()
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(settings.language, key)
   const previewRef = useRef<HTMLAudioElement | null>(null)
 
   const [activeCategory, setActiveCategory] = useState('New Music')
   const [yearFilter, setYearFilter] = useState('All')
   const [genreFilter, setGenreFilter] = useState('All')
-  const [library, setLibrary] = useState<string[]>([])
   const [previewingId, setPreviewingId] = useState<string | null>(null)
 
   const albums = useMemo(() => {
-    return musicTracks
+    return tracks
       .slice(0, 36)
       .map((track) => ({
         id: track.id,
@@ -38,7 +38,7 @@ export function HomeMusicSection() {
         url: track.url,
         popularity: track.popularity ?? 0,
       }))
-  }, [])
+  }, [tracks])
 
   const years = useMemo(() => ['All', ...Array.from(new Set(albums.map((album) => album.year))).sort().reverse()], [albums])
   const genres = useMemo(() => ['All', ...Array.from(new Set(albums.map((album) => album.genre)))], [albums])
@@ -199,9 +199,11 @@ export function HomeMusicSection() {
                   <button
                     onClick={(e) => {
                       e.preventDefault()
-                      const inLibrary = library.includes(album.id)
-                      const next = inLibrary ? library.filter((id) => id !== album.id) : [...library, album.id]
-                      setLibrary(next)
+                      const inLibrary = settings.favoriteTracks.includes(album.id)
+                      const next = inLibrary
+                        ? settings.favoriteTracks.filter((id) => id !== album.id)
+                        : [...settings.favoriteTracks, album.id]
+                      updateSetting('favoriteTracks', next)
                       toast({
                         title: inLibrary ? t('removedFromLibrary') : t('addedToLibrary'),
                         description: album.title,
@@ -210,7 +212,7 @@ export function HomeMusicSection() {
                     className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/15"
                   >
                     <Plus size={12} />
-                    {library.includes(album.id) ? t('inLibrary') : t('addToLibrary')}
+                    {settings.favoriteTracks.includes(album.id) ? t('inLibrary') : t('addToLibrary')}
                   </button>
                 </div>
               </div>

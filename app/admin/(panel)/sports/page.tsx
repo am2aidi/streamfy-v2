@@ -5,9 +5,11 @@ import Image from 'next/image'
 import { Calendar, Clock3, Plus, Search, Trophy } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useFilterOptions } from '@/lib/admin-filters'
+import { fileToDataUrl, summarizeStoredAsset } from '@/lib/file-data-url'
 import { getLeagueHeroImage, getTeamArtwork } from '@/lib/sports-media'
 
 type SportsRow = {
+  id?: string
   sport: 'Football' | 'Basketball' | 'Volleyball'
   teamA: string
   teamALogo?: string
@@ -19,14 +21,6 @@ type SportsRow = {
   status: 'Live' | 'Upcoming' | 'Finished'
   stream: string
 }
-
-const initialRows: SportsRow[] = [
-  { sport: 'Football', teamA: 'Liverpool', teamB: 'Manchester United', league: 'Premier League', date: '2026-03-10', status: 'Live', stream: 'streamfy.live/epl' },
-  { sport: 'Football', teamA: 'Napoli', teamB: 'Inter', league: 'Serie A', date: '2026-03-11', status: 'Upcoming', stream: 'streamfy.live/seriea' },
-  { sport: 'Football', teamA: 'Barcelona', teamB: 'Arsenal', league: 'Champions League', date: '2026-03-10', status: 'Live', stream: 'streamfy.live/ucl' },
-  { sport: 'Basketball', teamA: 'Lakers', teamB: 'Celtics', league: 'NBA', date: '2026-03-11', status: 'Upcoming', stream: 'streamfy.live/nba' },
-  { sport: 'Volleyball', teamA: 'Poland', teamB: 'Brazil', league: 'Volleyball Nations League', date: '2026-03-12', status: 'Finished', stream: 'streamfy.live/vnl' },
-]
 
 const LEAGUE_PRESETS = [
   'Champions League',
@@ -83,7 +77,7 @@ function getHeroSrc(league: string) {
 
 export default function AdminSportsPage() {
   const { toast } = useToast()
-  const [rows, setRows] = useState<SportsRow[]>(() => normalizeRows(initialRows))
+  const [rows, setRows] = useState<SportsRow[]>([])
   const [open, setOpen] = useState(false)
   const [editIndex, setEditIndex] = useState<number | null>(null)
   const [search, setSearch] = useState('')
@@ -106,8 +100,15 @@ export default function AdminSportsPage() {
   const storedSportsFilters = useFilterOptions('sports')
   const leagueOptions = useMemo(() => Array.from(new Set([...storedSportsFilters, ...LEAGUE_PRESETS])), [storedSportsFilters])
 
+  const refreshRows = async () => {
+    const res = await fetch('/api/sports-matches?admin=1', { cache: 'no-store' })
+    if (!res.ok) throw new Error('Failed to refresh matches')
+    const data = (await res.json()) as { items: SportsRow[] }
+    setRows(normalizeRows(data.items))
+  }
+
   useEffect(() => {
-    setRows((prev) => normalizeRows(prev))
+    void refreshRows().catch(() => {})
     const timer = setInterval(() => setRows((prev) => normalizeRows(prev)), 60_000)
     return () => clearInterval(timer)
   }, [])
@@ -158,7 +159,7 @@ export default function AdminSportsPage() {
     setOpen(true)
   }
 
-  const save = () => {
+  const save = async () => {
     if (!form.teamA.trim() || !form.teamB.trim()) {
       toast({ title: 'Missing teams', description: 'Team A and Team B are required.' })
       return
@@ -174,6 +175,7 @@ export default function AdminSportsPage() {
 
     const next = {
       ...form,
+      ...(form.id ? { id: form.id } : {}),
       teamA: form.teamA.trim(),
       teamALogo: getLogoSrc(form.teamALogo, form.teamA.trim()),
       teamB: form.teamB.trim(),
@@ -183,20 +185,37 @@ export default function AdminSportsPage() {
       stream: form.stream.trim(),
     }
 
-    if (editIndex === null) {
-      setRows((prev) => normalizeRows([next, ...prev]))
-      toast({ title: 'Sports item added', description: `${next.teamA} vs ${next.teamB} added.` })
-    } else {
-      setRows((prev) => normalizeRows(prev.map((row, idx) => (idx === editIndex ? next : row))))
-      toast({ title: 'Sports item updated', description: `${next.teamA} vs ${next.teamB} updated.` })
-    }
+    await fetch('/api/sports-matches', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(next),
+    })
+    await refreshRows()
+    toast({
+      title: editIndex === null ? 'Sports item added' : 'Sports item updated',
+      description: `${next.teamA} vs ${next.teamB} ${editIndex === null ? 'added' : 'updated'}.`,
+    })
     setOpen(false)
   }
 
-  const remove = (idx: number) => {
+  const remove = async (idx: number) => {
     const item = rows[idx]
-    setRows((prev) => prev.filter((_, i) => i !== idx))
+    if (item.id) {
+      await fetch(`/api/sports-matches/${item.id}`, { method: 'DELETE' })
+      await refreshRows()
+    }
     toast({ title: 'Deleted', description: `${item.teamA} vs ${item.teamB} removed.` })
+  }
+
+  const saveImageField = async (field: 'teamALogo' | 'teamBLogo' | 'leagueLogo', file: File | null) => {
+    if (!file) return
+    try {
+      const dataUrl = await fileToDataUrl(file)
+      setForm((prev) => ({ ...prev, [field]: dataUrl }))
+      toast({ title: 'Image saved', description: `${file.name} will be stored in the database.` })
+    } catch {
+      toast({ title: 'Upload failed', description: 'We could not read that image file.' })
+    }
   }
 
   const todayIso = toIsoDate(new Date())
@@ -321,16 +340,9 @@ export default function AdminSportsPage() {
             </div>
             <div className="space-y-2">
               {filteredRows.map((row, idx) => {
-                const rowIndex = rows.findIndex(
-                  (item) =>
-                    item.teamA === row.teamA &&
-                    item.teamB === row.teamB &&
-                    item.league === row.league &&
-                    item.date === row.date &&
-                    item.stream === row.stream
-                )
+                const rowIndex = rows.findIndex((item) => item.id === row.id)
                 return (
-                  <div key={`${row.teamA}-${row.teamB}-${idx}`} className="rounded-xl border border-white/10 bg-black/20 p-2.5">
+                  <div key={row.id ?? `${row.teamA}-${row.teamB}-${idx}`} className="rounded-xl border border-white/10 bg-black/20 p-2.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <button onClick={() => setSelectedMatch(idx)} className="rounded-md bg-white/10 px-2 py-1 text-[11px] text-slate-200">Preview</button>
                       <span className="text-xs text-slate-300">{row.league}</span>
@@ -392,13 +404,13 @@ export default function AdminSportsPage() {
           </article>
 
           <article className="rounded-2xl border border-white/10 bg-[#0a1020] p-3">
-            <h4 className="text-sm font-semibold">Match Slip (Prototype)</h4>
+            <h4 className="text-sm font-semibold">Match Slip</h4>
             <div className="mt-2 rounded-lg bg-black/20 p-2.5 text-xs text-slate-300">
               <p className="font-medium">{featured ? `${featured.teamA} vs ${featured.teamB}` : 'No match selected'}</p>
               <p className="mt-1 text-slate-400">{featured?.league ?? '--'} | {featured?.sport ?? '--'}</p>
               <p className="mt-2 text-[#f4a30a]">Potential: 330.00 USD</p>
             </div>
-            <button className="mt-3 w-full rounded-lg bg-[#f4a30a] px-3 py-2 text-sm font-semibold text-black">Place Bet (Prototype)</button>
+            <button className="mt-3 w-full rounded-lg bg-[#f4a30a] px-3 py-2 text-sm font-semibold text-black">Track Match</button>
           </article>
         </aside>
       </div>
@@ -419,8 +431,22 @@ export default function AdminSportsPage() {
               </div>
               <input value={form.teamA} onChange={(e) => setForm((p) => ({ ...p, teamA: e.target.value }))} placeholder="Team A" className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
               <input value={form.teamB} onChange={(e) => setForm((p) => ({ ...p, teamB: e.target.value }))} placeholder="Team B" className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
-              <input value={form.teamALogo ?? ''} onChange={(e) => setForm((p) => ({ ...p, teamALogo: e.target.value }))} placeholder="Team A logo URL (optional)" className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
-              <input value={form.teamBLogo ?? ''} onChange={(e) => setForm((p) => ({ ...p, teamBLogo: e.target.value }))} placeholder="Team B logo URL (optional)" className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
+              <div className="space-y-2">
+                <input value={form.teamALogo ?? ''} onChange={(e) => setForm((p) => ({ ...p, teamALogo: e.target.value }))} placeholder="Team A logo URL or upload below" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
+                <label className="block rounded-xl border border-dashed border-white/20 bg-black/20 px-3 py-3 text-xs text-slate-300">
+                  Upload Team A logo
+                  <input type="file" accept="image/*" className="mt-2 block text-xs" onChange={(e) => void saveImageField('teamALogo', e.target.files?.[0] ?? null)} />
+                  <p className="mt-2 text-[11px] text-slate-400">{summarizeStoredAsset(form.teamALogo, 'No logo selected')}</p>
+                </label>
+              </div>
+              <div className="space-y-2">
+                <input value={form.teamBLogo ?? ''} onChange={(e) => setForm((p) => ({ ...p, teamBLogo: e.target.value }))} placeholder="Team B logo URL or upload below" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
+                <label className="block rounded-xl border border-dashed border-white/20 bg-black/20 px-3 py-3 text-xs text-slate-300">
+                  Upload Team B logo
+                  <input type="file" accept="image/*" className="mt-2 block text-xs" onChange={(e) => void saveImageField('teamBLogo', e.target.files?.[0] ?? null)} />
+                  <p className="mt-2 text-[11px] text-slate-400">{summarizeStoredAsset(form.teamBLogo, 'No logo selected')}</p>
+                </label>
+              </div>
               <select value={leagueMode} onChange={(e) => setLeagueMode(e.target.value as 'preset' | 'custom')} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm">
                 <option value="preset">Select league option</option>
                 <option value="custom">Type custom league</option>
@@ -434,7 +460,14 @@ export default function AdminSportsPage() {
               ) : (
                 <input value={form.league} onChange={(e) => setForm((p) => ({ ...p, league: e.target.value }))} placeholder="Type league name" className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
               )}
-              <input value={form.leagueLogo ?? ''} onChange={(e) => setForm((p) => ({ ...p, leagueLogo: e.target.value }))} placeholder="League logo URL (optional)" className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
+              <div className="space-y-2">
+                <input value={form.leagueLogo ?? ''} onChange={(e) => setForm((p) => ({ ...p, leagueLogo: e.target.value }))} placeholder="League logo URL or upload below" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
+                <label className="block rounded-xl border border-dashed border-white/20 bg-black/20 px-3 py-3 text-xs text-slate-300">
+                  Upload league image
+                  <input type="file" accept="image/*" className="mt-2 block text-xs" onChange={(e) => void saveImageField('leagueLogo', e.target.files?.[0] ?? null)} />
+                  <p className="mt-2 text-[11px] text-slate-400">{summarizeStoredAsset(form.leagueLogo, 'No image selected')}</p>
+                </label>
+              </div>
               <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm" />
               <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as SportsRow['status'] }))} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm">
                 <option>Live</option>

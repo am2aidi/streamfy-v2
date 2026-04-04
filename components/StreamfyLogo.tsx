@@ -92,6 +92,8 @@ export function StreamfyLogo({
 
     return (
       <span className={className} style={wrapperStyle} {...ariaProps} {...props}>
+        {/* Custom crop detection needs a real <img> element so we can measure image pixels after load. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
           alt=""

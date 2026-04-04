@@ -1,25 +1,45 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Plus, Save, Trash2, RotateCcw } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Plus, RotateCcw, Save, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { getBotFaqEntries, getDefaultBotFaqEntries, resetBotFaqEntries, setBotFaqEntries, type BotFaqEntry } from '@/lib/streamfy-bot'
+
+type BotFaqEntry = {
+  id: string
+  title: string
+  keywords: string[]
+  responseText: string
+  isActive?: boolean
+  sortOrder?: number
+}
 
 function uid() {
   return `bot-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+const defaultEntry: BotFaqEntry = {
+  id: '',
+  title: '',
+  keywords: [],
+  responseText: '',
+}
+
 export default function AdminChatbotPage() {
   const { toast } = useToast()
-  const [entries, setEntries] = useState<BotFaqEntry[]>(() => getBotFaqEntries())
+  const [entries, setEntries] = useState<BotFaqEntry[]>([])
   const [query, setQuery] = useState('')
+  const [form, setForm] = useState<BotFaqEntry>(defaultEntry)
 
-  const [form, setForm] = useState<BotFaqEntry>({
-    id: '',
-    title: '',
-    keywords: [],
-    responseText: '',
-  })
+  const refresh = async () => {
+    const res = await fetch('/api/bot-faq', { cache: 'no-store' })
+    if (!res.ok) throw new Error('Failed to load bot FAQ')
+    const data = (await res.json()) as { items: BotFaqEntry[] }
+    setEntries(data.items)
+  }
+
+  useEffect(() => {
+    void refresh().catch(() => {})
+  }, [])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -27,48 +47,43 @@ export default function AdminChatbotPage() {
     return entries.filter((e) => (e.title + ' ' + e.keywords.join(' ') + ' ' + e.responseText).toLowerCase().includes(q))
   }, [entries, query])
 
-  const startNew = () => setForm({ id: '', title: '', keywords: [], responseText: '' })
+  const startNew = () => setForm(defaultEntry)
 
-  const save = () => {
+  const save = async () => {
     if (!form.title.trim()) return toast({ title: 'Missing title', description: 'Add a title.' })
     if (!form.keywords.length) return toast({ title: 'Missing keywords', description: 'Add at least one keyword.' })
     if (!form.responseText.trim()) return toast({ title: 'Missing response', description: 'Add a response text.' })
 
-    const next: BotFaqEntry = {
-      id: form.id || uid(),
-      title: form.title.trim(),
-      keywords: form.keywords.map((k) => k.trim()).filter(Boolean),
-      responseText: form.responseText.trim(),
-    }
+    await fetch('/api/bot-faq', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        id: form.id || uid(),
+        title: form.title.trim(),
+        keywords: form.keywords.map((k) => k.trim()).filter(Boolean),
+        responseText: form.responseText.trim(),
+        sortOrder: form.sortOrder ?? entries.length + 1,
+      }),
+    })
 
-    const updated = (() => {
-      const idx = entries.findIndex((x) => x.id === next.id)
-      if (idx === -1) return [next, ...entries]
-      return entries.map((x) => (x.id === next.id ? next : x))
-    })()
-
-    setEntries(updated)
-    setBotFaqEntries(updated)
-    toast({ title: form.id ? 'Updated' : 'Created', description: next.title })
+    await refresh()
+    toast({ title: form.id ? 'Updated' : 'Created', description: form.title.trim() })
     startNew()
   }
 
-  const edit = (e: BotFaqEntry) => setForm(e)
+  const edit = (entry: BotFaqEntry) => setForm(entry)
 
-  const remove = (id: string) => {
-    const updated = entries.filter((e) => e.id !== id)
-    setEntries(updated)
-    setBotFaqEntries(updated)
+  const remove = async (id: string) => {
+    await fetch(`/api/bot-faq/${id}`, { method: 'DELETE' })
+    await refresh()
     toast({ title: 'Deleted', description: 'Entry removed.' })
     if (form.id === id) startNew()
   }
 
-  const reset = () => {
-    resetBotFaqEntries()
-    const updated = getDefaultBotFaqEntries()
-    setEntries(updated)
-    setBotFaqEntries(updated)
-    toast({ title: 'Reset', description: 'Bot FAQ restored.' })
+  const reset = async () => {
+    await Promise.all(entries.map((entry) => fetch(`/api/bot-faq/${entry.id}`, { method: 'DELETE' })))
+    await refresh()
+    toast({ title: 'Cleared', description: 'Bot FAQ list cleared. Add the rules you want.' })
     startNew()
   }
 
@@ -77,7 +92,7 @@ export default function AdminChatbotPage() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold">Chatbot FAQ</h2>
-          <p className="mt-1 text-sm text-slate-300">Non‑AI bot rules: if a message contains a keyword, it replies with your response.</p>
+          <p className="mt-1 text-sm text-slate-300">Manage keyword-based replies stored in your database.</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <input
@@ -87,10 +102,10 @@ export default function AdminChatbotPage() {
             className="w-44 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none"
           />
           <button
-            onClick={reset}
+            onClick={() => void reset()}
             className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white hover:bg-white/[0.07]"
           >
-            <RotateCcw size={16} /> Reset
+            <RotateCcw size={16} /> Clear
           </button>
           <button
             onClick={startNew}
@@ -114,20 +129,20 @@ export default function AdminChatbotPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((e) => (
-                  <tr key={e.id} className="border-t border-white/10">
-                    <td className="px-4 py-3 text-white font-medium">{e.title}</td>
-                    <td className="px-4 py-3 text-slate-300">{e.keywords.join(', ')}</td>
+                {filtered.map((entry) => (
+                  <tr key={entry.id} className="border-t border-white/10">
+                    <td className="px-4 py-3 text-white font-medium">{entry.title}</td>
+                    <td className="px-4 py-3 text-slate-300">{entry.keywords.join(', ')}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => edit(e)}
+                          onClick={() => edit(entry)}
                           className="rounded-lg border border-white/10 bg-black/30 px-3 py-1.5 text-xs text-white hover:bg-white/5"
                         >
                           Edit
                         </button>
                         <button
-                          onClick={() => remove(e.id)}
+                          onClick={() => void remove(entry.id)}
                           className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-200 hover:bg-red-500/15"
                         >
                           <span className="inline-flex items-center gap-1">
@@ -173,7 +188,7 @@ export default function AdminChatbotPage() {
               className="w-full resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-slate-500 outline-none"
             />
             <button
-              onClick={save}
+              onClick={() => void save()}
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-black"
               style={{ background: 'linear-gradient(to right, var(--admin-accent-a), var(--admin-accent-b))' }}
             >

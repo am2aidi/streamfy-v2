@@ -7,22 +7,24 @@ import { Heart, PlayCircle } from 'lucide-react'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { useAppSettings } from '@/components/AppSettingsProvider'
-import { shortVideos, type ShortsCategory } from '@/lib/shorts-data'
+import type { ShortsCategory } from '@/lib/shorts-data'
 import { NewsFeed } from '@/components/NewsFeed'
 import { useNewsItems } from '@/hooks/useNewsItems'
+import { useShorts } from '@/hooks/useShorts'
 
 type Tab = 'all' | 'news' | ShortsCategory
 
 export default function ShortsPage() {
   const { settings, updateSetting } = useAppSettings()
+  const { items: shorts } = useShorts()
   const { items: allNews } = useNewsItems()
   const [tab, setTab] = useState<Tab>('all')
 
   const items = useMemo(() => {
-    if (tab === 'all') return shortVideos
+    if (tab === 'all') return shorts
     if (tab === 'news') return []
-    return shortVideos.filter((s) => s.category === tab)
-  }, [tab])
+    return shorts.filter((s) => s.category === tab)
+  }, [shorts, tab])
 
   const shortsNews = useMemo(() => allNews.slice(0, 6), [allNews])
 

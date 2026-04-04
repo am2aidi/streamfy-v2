@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { hashPasswordForStorage } from '@/lib/server/auth-db'
+import { ensureSeedAdminUser, hashPasswordForStorage } from '@/lib/server/auth-db'
 import { allRows, asBoolean, asNumber, asString, firstRow, parseJsonArray, runQuery } from '@/lib/server/d1'
 
 export type SocialLinkRecord = { name: 'TikTok' | 'WhatsApp' | 'YouTube'; url: string; enabled: boolean }
@@ -348,6 +348,7 @@ export async function deleteAdCampaignFromDb(id: string) {
 }
 
 export async function listAdminUsersFromDb() {
+  await ensureSeedAdminUser()
   const rows = await allRows<AdminUserRow>('SELECT id, name, username, email, provider, role, status, created_at FROM users ORDER BY created_at DESC')
   return rows.map((row) => {
     const name = deriveUserName(row)

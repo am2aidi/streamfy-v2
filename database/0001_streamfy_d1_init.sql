@@ -274,7 +274,7 @@ CREATE TABLE IF NOT EXISTS community_uploads (
   description TEXT,
   image_url TEXT NOT NULL,
   trailer_url TEXT,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'published', 'rejected', 'deleted')),
+  status TEXT NOT NULL DEFAULT 'published' CHECK (status IN ('pending', 'published', 'rejected', 'deleted')),
   created_by_user_id TEXT NOT NULL,
   published_at TEXT,
   rejection_reason TEXT,

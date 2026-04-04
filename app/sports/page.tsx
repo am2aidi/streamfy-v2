@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
+import { ChevronRight, Clock, Newspaper, PlayCircle, Star, Trophy } from 'lucide-react'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
-import { ChevronRight, Clock, Newspaper, PlayCircle, Star, Trophy } from 'lucide-react'
-import Image from 'next/image'
 import { useAppSettings } from '@/components/AppSettingsProvider'
 import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/hooks/use-toast'
@@ -19,12 +19,48 @@ import { useSportsMatches } from '@/hooks/useSportsMatches'
 
 type TabId = 'yesterday' | 'today' | 'upcoming'
 type SportFilter = 'all' | 'football' | 'basketball' | 'volleyball'
+type NewsTopicId =
+  | 'all'
+  | 'premier-league'
+  | 'la-liga'
+  | 'transfer'
+  | 'champions-league'
+  | 'saudi-arabia'
+  | 'efl-cup'
+  | 'serie-a'
+  | 'mls'
+  | 'afcon'
 
 const tabOptions: { id: TabId; label: string }[] = [
   { id: 'today', label: 'Today' },
   { id: 'upcoming', label: 'Upcoming' },
   { id: 'yesterday', label: 'Yesterday' },
 ]
+
+const newsTopicOptions: { id: NewsTopicId; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'premier-league', label: 'English Premier League' },
+  { id: 'la-liga', label: 'La Liga' },
+  { id: 'transfer', label: 'Transfer' },
+  { id: 'champions-league', label: 'UEFA Champions League' },
+  { id: 'saudi-arabia', label: 'Saudi Arabia' },
+  { id: 'efl-cup', label: 'EFL Cup' },
+  { id: 'serie-a', label: 'Serie A' },
+  { id: 'mls', label: 'MLS' },
+  { id: 'afcon', label: 'AFCON' },
+]
+
+const newsTopicKeywords: Record<Exclude<NewsTopicId, 'all'>, string[]> = {
+  'premier-league': ['premier', 'manchester', 'arsenal', 'chelsea', 'liverpool', 'city', 'united'],
+  'la-liga': ['barcelona', 'madrid', 'la liga', 'raphinha'],
+  transfer: ['transfer', 'window', 'rumor', 'deal', 'salah', 'fernandez'],
+  'champions-league': ['champions', 'european', 'uefa'],
+  'saudi-arabia': ['saudi', 'al nassr', 'al hilal'],
+  'efl-cup': ['efl', 'cup', 'carabao'],
+  'serie-a': ['serie a', 'inter', 'milan', 'juventus', 'napoli'],
+  mls: ['mls', 'miami', 'galaxy'],
+  afcon: ['afcon', 'africa cup'],
+}
 
 function inferSport(league: string): Exclude<SportFilter, 'all'> {
   const value = league.toLowerCase()
@@ -37,6 +73,11 @@ function formatStatus(status?: 'live' | 'final' | 'upcoming') {
   if (status === 'live') return 'Live'
   if (status === 'final') return 'Final'
   return 'Upcoming'
+}
+
+function matchesNewsTopic(topic: NewsTopicId, sourceText: string) {
+  if (topic === 'all') return true
+  return newsTopicKeywords[topic].some((keyword) => sourceText.includes(keyword))
 }
 
 export default function SportsPage() {
@@ -54,6 +95,7 @@ export default function SportsPage() {
   const [sportFilter, setSportFilter] = useState<SportFilter>('all')
   const [leagueFilter, setLeagueFilter] = useState('all')
   const [myLeagueOnly, setMyLeagueOnly] = useState(false)
+  const [newsTopic, setNewsTopic] = useState<NewsTopicId>('all')
 
   const tabMatches = useMemo(
     () =>
@@ -67,18 +109,32 @@ export default function SportsPage() {
     [activeTab, leagueFilter, matches, myLeagueOnly, settings.favoriteLeagues, sportFilter],
   )
 
-  const liveMatches = useMemo(
-    () => matches.filter((match) => match.status === 'live').slice(0, 4),
-    [matches],
-  )
+  const liveMatches = useMemo(() => matches.filter((match) => match.status === 'live').slice(0, 4), [matches])
 
   const leagueOptions = useMemo(
-    () => ['all', ...Array.from(new Set(matches.filter((match) => sportFilter === 'all' || inferSport(match.league) === sportFilter).map((match) => match.league)))],
+    () => [
+      'all',
+      ...Array.from(
+        new Set(
+          matches
+            .filter((match) => sportFilter === 'all' || inferSport(match.league) === sportFilter)
+            .map((match) => match.league),
+        ),
+      ),
+    ],
     [matches, sportFilter],
   )
 
   const sportsNews = byCategory('sports')
   const sportsShorts = useMemo(() => shorts.filter((item) => item.category === 'sports').slice(0, 6), [shorts])
+
+  const featuredSportsNews = useMemo(() => {
+    const filtered = sportsNews.filter((item) =>
+      matchesNewsTopic(newsTopic, `${item.title} ${item.summary} ${item.source}`.toLowerCase()),
+    )
+    const source = filtered.length > 0 ? filtered : sportsNews
+    return source.slice(0, 3)
+  }, [newsTopic, sportsNews])
 
   const openRestrictedMatch = (href: string) => {
     requireAuth(() => router.push(href), t('authSigninPrompt'))
@@ -100,16 +156,16 @@ export default function SportsPage() {
     <div className="flex min-h-screen bg-black">
       <Sidebar />
 
-      <div className="w-full md:ml-[92px] md:w-[calc(100vw-92px)] min-h-[100dvh] overflow-x-hidden pb-24 md:pb-8">
+      <div className="w-full min-h-[100dvh] overflow-x-hidden pb-24 md:ml-[92px] md:w-[calc(100vw-92px)] md:pb-8">
         <Header />
 
         <main className="flex flex-col gap-6 px-6">
           <LiveMomentsBanner section="sports" />
 
           <div className="flex items-center justify-between">
-            <h1 className="text-white text-3xl font-bold">{t('sports')}</h1>
+            <h1 className="text-3xl font-bold text-white">{t('sports')}</h1>
             <button
-              onClick={() => setMyLeagueOnly((prev) => !prev)}
+              onClick={() => setMyLeagueOnly((previous) => !previous)}
               className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 myLeagueOnly ? 'bg-[#f4a30a] text-black' : 'bg-white/10 text-white hover:bg-white/15'
               }`}
@@ -129,7 +185,9 @@ export default function SportsPage() {
                 key={option.id}
                 onClick={() => setView(option.id as typeof view)}
                 className={`rounded-full border px-4 py-2 text-sm ${
-                  view === option.id ? 'border-[#f4a30a]/60 bg-[#f4a30a]/15 text-[#f4a30a]' : 'border-white/15 bg-white/5 text-gray-300'
+                  view === option.id
+                    ? 'border-[#f4a30a]/60 bg-[#f4a30a]/15 text-[#f4a30a]'
+                    : 'border-white/15 bg-white/5 text-gray-300'
                 }`}
               >
                 {option.label}
@@ -137,7 +195,62 @@ export default function SportsPage() {
             ))}
           </div>
 
-          {view !== 'news' ? (
+          {view !== 'shorts' ? (
+            <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 md:p-6">
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {newsTopicOptions.map((topic) => (
+                  <button
+                    key={topic.id}
+                    onClick={() => setNewsTopic(topic.id)}
+                    className={`shrink-0 rounded-xl border px-5 py-3 text-sm font-semibold transition-colors ${
+                      newsTopic === topic.id
+                        ? 'border-[#2f6cf6] bg-[#2f6cf6] text-white'
+                        : 'border-white/10 bg-white/[0.04] text-gray-200 hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    {topic.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-8 text-center">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#f4a30a]">Streamfy Sports Desk</p>
+                <h2 className="mt-3 text-3xl font-black text-white md:text-5xl">Latest Football News</h2>
+              </div>
+
+              <div className="mt-8 grid gap-5 lg:grid-cols-3">
+                {featuredSportsNews.map((item) => (
+                  <article
+                    key={item.id}
+                    className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] shadow-[0_18px_50px_rgba(0,0,0,0.28)]"
+                  >
+                    <div className="relative h-64">
+                      <Image src={item.image} alt={item.title} fill className="object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
+                    </div>
+                    <div className="space-y-3 p-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="rounded-full bg-white/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white">
+                          {item.source}
+                        </span>
+                        <span className="text-xs text-gray-400">{item.time}</span>
+                      </div>
+                      <h3 className="text-2xl font-bold leading-tight text-white">{item.title}</h3>
+                      <p className="text-sm leading-6 text-gray-300">{item.summary}</p>
+                    </div>
+                  </article>
+                ))}
+
+                {featuredSportsNews.length === 0 ? (
+                  <div className="rounded-3xl border border-white/10 bg-black/25 p-6 text-sm text-gray-300 lg:col-span-3">
+                    No sports news yet.
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          {view !== 'news' && view !== 'shorts' ? (
             <section className="flex flex-col gap-4">
               <div className="flex flex-wrap items-center gap-2">
                 {([
@@ -163,7 +276,7 @@ export default function SportsPage() {
                 ))}
                 <select
                   value={leagueFilter}
-                  onChange={(e) => setLeagueFilter(e.target.value)}
+                  onChange={(event) => setLeagueFilter(event.target.value)}
                   className="ml-auto rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-white"
                 >
                   <option value="all">{t('allLeagues')}</option>
@@ -175,82 +288,62 @@ export default function SportsPage() {
                 </select>
               </div>
 
-              <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-                <article className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                      <h2 className="text-white text-lg font-bold">{t('liveEvents')}</h2>
-                    </div>
-                    <Link href="/sports" className="flex items-center gap-1 text-[#f4a30a] text-sm hover:underline">
-                      {t('seeAll')} <ChevronRight size={14} />
-                    </Link>
+              <article className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+                    <h2 className="text-lg font-bold text-white">{t('liveEvents')}</h2>
                   </div>
+                  <Link href="/sports" className="flex items-center gap-1 text-sm text-[#f4a30a] hover:underline">
+                    {t('seeAll')} <ChevronRight size={14} />
+                  </Link>
+                </div>
 
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {liveMatches.length > 0 ? (
-                      liveMatches.map((match) => (
-                        <Link
-                          key={match.id}
-                          href={`/sports/${match.id}`}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            openRestrictedMatch(`/sports/${match.id}`)
-                          }}
-                          className="group overflow-hidden rounded-xl border border-white/10 bg-black/25 hover:bg-white/[0.06]"
-                        >
-                          <div className="relative h-32">
-                            <Image src={match.heroImage ?? '/sports-hero.jpg'} alt={match.league} fill className="object-cover opacity-55 group-hover:opacity-70" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                            <div className="absolute left-3 top-3 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                              Live
-                            </div>
-                            <div className="absolute bottom-3 left-3 right-3">
-                              <p className="text-sm font-semibold text-white">{match.team1.name} vs {match.team2.name}</p>
-                              <p className="mt-1 text-xs text-gray-300">{match.league} • {match.score1 ?? 0}-{match.score2 ?? 0}</p>
-                            </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {liveMatches.length > 0 ? (
+                    liveMatches.map((match) => (
+                      <Link
+                        key={match.id}
+                        href={`/sports/${match.id}`}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          openRestrictedMatch(`/sports/${match.id}`)
+                        }}
+                        className="group overflow-hidden rounded-xl border border-white/10 bg-black/25 hover:bg-white/[0.06]"
+                      >
+                        <div className="relative h-36">
+                          <Image
+                            src={match.heroImage ?? '/sports-hero.jpg'}
+                            alt={match.league}
+                            fill
+                            className="object-cover opacity-55 group-hover:opacity-70"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                          <div className="absolute left-3 top-3 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                            Live
                           </div>
-                        </Link>
-                      ))
-                    ) : (
-                      <div className="rounded-xl border border-white/10 bg-black/25 p-4 text-sm text-gray-300">No live matches right now.</div>
-                    )}
-                  </div>
-                </article>
-
-                {view !== 'shorts' ? (
-                  <article className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                      <h2 className="inline-flex items-center gap-2 text-white text-lg font-bold">
-                        <Newspaper size={18} className="text-[#f4a30a]" />
-                        {t('sportsNews')}
-                      </h2>
-                      <span className="text-xs text-gray-500">{t('updatedEveryHour')}</span>
-                    </div>
-
-                    <div className="space-y-3">
-                      {sportsNews.slice(0, 4).map((item) => (
-                        <div key={item.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/25 p-2.5">
-                          <div className="relative h-16 w-24 overflow-hidden rounded-lg border border-white/10">
-                            <Image src={item.image} alt={item.title} fill className="object-cover" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="line-clamp-2 text-sm font-semibold text-white">{item.title}</p>
-                            <p className="mt-1 text-xs text-gray-400">{item.source} • {item.time}</p>
+                          <div className="absolute bottom-3 left-3 right-3">
+                            <p className="text-sm font-semibold text-white">
+                              {match.team1.name} vs {match.team2.name}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-300">
+                              {match.league} | {match.score1 ?? 0}-{match.score2 ?? 0}
+                            </p>
                           </div>
                         </div>
-                      ))}
-                      {sportsNews.length === 0 ? (
-                        <div className="rounded-xl border border-white/10 bg-black/25 p-4 text-sm text-gray-300">No sports news yet.</div>
-                      ) : null}
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="rounded-xl border border-white/10 bg-black/25 p-4 text-sm text-gray-300 md:col-span-2 xl:col-span-4">
+                      No live matches right now.
                     </div>
-                  </article>
-                ) : null}
-              </div>
+                  )}
+                </div>
+              </article>
             </section>
           ) : null}
 
-          {view !== 'shorts' ? (
+          {view !== 'news' && view !== 'shorts' ? (
             <section className="flex flex-col gap-4">
               <div className="flex items-center gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.04] p-2">
                 {tabOptions.map((tab) => (
@@ -258,7 +351,9 @@ export default function SportsPage() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-                      activeTab === tab.id ? 'bg-white/15 text-white' : 'bg-black/30 text-gray-300 hover:bg-white/[0.06] hover:text-white'
+                      activeTab === tab.id
+                        ? 'bg-white/15 text-white'
+                        : 'bg-black/30 text-gray-300 hover:bg-white/[0.06] hover:text-white'
                     }`}
                   >
                     {tab.label}
@@ -267,7 +362,9 @@ export default function SportsPage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-gray-400">{tabOptions.find((tab) => tab.id === activeTab)?.label}</span>
+                <span className="text-xs font-medium uppercase tracking-wider text-gray-400">
+                  {tabOptions.find((tab) => tab.id === activeTab)?.label}
+                </span>
                 <span className="text-xs text-gray-500">{tabMatches.length} matches</span>
               </div>
 
@@ -281,11 +378,11 @@ export default function SportsPage() {
                       <Link
                         key={match.id}
                         href={`/sports/${match.id}`}
-                        onClick={(e) => {
-                          e.preventDefault()
+                        onClick={(event) => {
+                          event.preventDefault()
                           openRestrictedMatch(`/sports/${match.id}`)
                         }}
-                        className="rounded-xl border border-white/[0.06] bg-white/[0.04] overflow-hidden hover:bg-white/[0.07] transition-colors"
+                        className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.04] transition-colors hover:bg-white/[0.07]"
                       >
                         <div className="flex items-center justify-center gap-2 border-b border-white/[0.04] py-2">
                           <div className="h-1.5 w-1.5 rounded-full bg-white/10" />
@@ -294,14 +391,18 @@ export default function SportsPage() {
 
                         <div className="flex items-center gap-3 px-4 py-3">
                           <button
-                            onClick={(e) => {
-                              e.preventDefault()
+                            onClick={(event) => {
+                              event.preventDefault()
                               toggleLeagueFavorite(match.league)
                             }}
                             className="text-gray-300 hover:text-[#f4a30a]"
                             aria-label={`Toggle ${match.league} favorite`}
                           >
-                            <Star size={12} fill={inLeagueFavorites ? '#f4a30a' : 'transparent'} className={inLeagueFavorites ? 'text-[#f4a30a]' : ''} />
+                            <Star
+                              size={12}
+                              fill={inLeagueFavorites ? '#f4a30a' : 'transparent'}
+                              className={inLeagueFavorites ? 'text-[#f4a30a]' : ''}
+                            />
                           </button>
 
                           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -334,8 +435,8 @@ export default function SportsPage() {
                           </div>
 
                           <button
-                            onClick={(e) => {
-                              e.preventDefault()
+                            onClick={(event) => {
+                              event.preventDefault()
                               const next = inWatchlist
                                 ? settings.watchlistMatches.filter((item) => item !== match.id)
                                 : [...settings.watchlistMatches, match.id]
@@ -365,7 +466,7 @@ export default function SportsPage() {
           {view !== 'news' ? (
             <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="inline-flex items-center gap-2 text-white text-lg font-bold">
+                <h2 className="inline-flex items-center gap-2 text-lg font-bold text-white">
                   <PlayCircle size={18} className="text-[#f4a30a]" />
                   {t('sportsShorts')}
                 </h2>
@@ -386,7 +487,7 @@ export default function SportsPage() {
 
           {view === 'all' ? (
             <section className="flex flex-col gap-4">
-              <h2 className="text-white text-lg font-bold">{t('popularSports')}</h2>
+              <h2 className="text-lg font-bold text-white">{t('popularSports')}</h2>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 {[
                   { name: 'Football', color: 'from-green-600 to-green-800', value: 'football' as const },
@@ -409,6 +510,32 @@ export default function SportsPage() {
                       Filter matches
                     </div>
                   </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {view === 'news' && sportsNews.length > 0 ? (
+            <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="inline-flex items-center gap-2 text-lg font-bold text-white">
+                  <Newspaper size={18} className="text-[#f4a30a]" />
+                  More headlines
+                </h2>
+                <span className="text-xs text-gray-500">Updated from the sports desk</span>
+              </div>
+
+              <div className="space-y-3">
+                {sportsNews.map((item) => (
+                  <div key={item.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/25 p-2.5">
+                    <div className="relative h-16 w-24 overflow-hidden rounded-lg border border-white/10">
+                      <Image src={item.image} alt={item.title} fill className="object-cover" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="line-clamp-2 text-sm font-semibold text-white">{item.title}</p>
+                      <p className="mt-1 text-xs text-gray-400">{item.source} | {item.time}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
             </section>

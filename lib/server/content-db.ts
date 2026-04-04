@@ -34,6 +34,17 @@ const seedUsers = [
     passwordHash: 'dev-demo-password',
   },
   {
+    id: 'u-user-zaidi-tester',
+    name: 'Zaidi Tester',
+    username: 'zaidi_tester',
+    email: 'zaidikwizera@yahoo.com',
+    phone: null,
+    provider: 'email',
+    role: 'user',
+    status: 'active',
+    passwordHash: 'zaidi100',
+  },
+  {
     id: 'u-alina',
     name: 'Alina',
     username: 'alina',
@@ -360,9 +371,6 @@ async function ensureSportsSeeded() {
 }
 
 async function ensureNewsSeeded() {
-  const count = await firstRow<{ count: number }>('SELECT COUNT(*) as count FROM news_items')
-  if (asNumber(count?.count) > 0) return
-
   for (const item of seedNewsItems) {
     await runQuery(
       `
@@ -846,6 +854,16 @@ export async function deleteNewsFromDb(id: string) {
 
 export async function listCommunityItemsFromDb() {
   await ensureUsersSeeded()
+  await runQuery(
+    `
+      UPDATE community_uploads
+      SET
+        status = 'published',
+        published_at = COALESCE(published_at, CURRENT_TIMESTAMP),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE status = 'pending'
+    `,
+  )
   const rows = await allRows<CommunityItemRow>(
     `
       SELECT cu.*, u.name as created_by_name, u.email as created_by_email
@@ -880,8 +898,8 @@ export async function createCommunityItemInDb(input: {
   await runQuery(
     `
       INSERT INTO community_uploads (
-        id, kind, title, description, image_url, trailer_url, status, created_by_user_id, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        id, kind, title, description, image_url, trailer_url, status, created_by_user_id, published_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, 'published', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `,
     [id, input.kind, input.title.trim(), input.description.trim(), input.imageUrl.trim(), input.trailerUrl?.trim() || null, input.createdBy],
   )

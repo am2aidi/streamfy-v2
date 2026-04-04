@@ -23,13 +23,24 @@ type SessionRow = {
   expires_at: string
 }
 
-const SEEDED_ADMIN = {
-  id: 'u-admin-zaidi',
-  name: 'Zaidi Kwizera',
-  username: 'zaidikwizera',
-  email: 'zaidikwizera@gmail.com',
-  password: 'zaidigram2023',
-}
+const SEEDED_AUTH_USERS = [
+  {
+    id: 'u-admin-zaidi',
+    name: 'Zaidi Kwizera',
+    username: 'zaidikwizera',
+    email: 'zaidikwizera@gmail.com',
+    password: 'zaidigram2023',
+    role: 'admin' as const,
+  },
+  {
+    id: 'u-user-zaidi-tester',
+    name: 'Zaidi Tester',
+    username: 'zaidi_tester',
+    email: 'zaidikwizera@yahoo.com',
+    password: 'zaidi100',
+    role: 'user' as const,
+  },
+]
 
 function uid(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`
@@ -118,38 +129,39 @@ async function nextAvailableUsername(base: string) {
   return `${normalizedBase}${crypto.randomUUID().slice(0, 4)}`.slice(0, 20)
 }
 
-export async function ensureSeedAdminUser() {
-  await repairLegacyPasswordStorage()
+async function ensureSeededAuthUser(user: (typeof SEEDED_AUTH_USERS)[number]) {
   const existing = await firstRow<{ id: string }>(
     'SELECT id FROM users WHERE lower(email) = lower(?) LIMIT 1',
-    [SEEDED_ADMIN.email],
+    [user.email],
   )
-  const passwordHash = await hashPasswordForStorage(SEEDED_ADMIN.password)
+  const passwordHash = await hashPasswordForStorage(user.password)
+  const userId = existing?.id || user.id
 
   await runQuery(
     `
       INSERT INTO users (
         id, name, username, email, provider, role, status, password_hash, email_verified, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, 'email', 'admin', 'active', ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ) VALUES (?, ?, ?, ?, 'email', ?, 'active', ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         username = excluded.username,
         email = excluded.email,
-        role = 'admin',
+        role = excluded.role,
         status = 'active',
         password_hash = excluded.password_hash,
         updated_at = CURRENT_TIMESTAMP
     `,
-    [
-      existing?.id || SEEDED_ADMIN.id,
-      SEEDED_ADMIN.name,
-      SEEDED_ADMIN.username,
-      SEEDED_ADMIN.email,
-      passwordHash,
-    ],
+    [userId, user.name, user.username, user.email, user.role, passwordHash],
   )
 
-  await ensureUserSettings(existing?.id || SEEDED_ADMIN.id)
+  await ensureUserSettings(userId)
+}
+
+export async function ensureSeedAdminUser() {
+  await repairLegacyPasswordStorage()
+  for (const user of SEEDED_AUTH_USERS) {
+    await ensureSeededAuthUser(user)
+  }
 }
 
 export async function getUserBySessionToken(sessionToken: string) {

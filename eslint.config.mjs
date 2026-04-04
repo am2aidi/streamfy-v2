@@ -6,7 +6,7 @@ const nextCoreWebVitals = require('eslint-config-next/core-web-vitals')
 export default [
   ...nextCoreWebVitals,
   {
-    ignores: ['.next/**', 'out/**', 'node_modules/**'],
+    ignores: ['.next/**', '.open-next/**', 'out/**', 'node_modules/**'],
   },
   {
     rules: {

@@ -285,7 +285,14 @@ export default function SettingsPage() {
     }).catch(() => null)
 
     if (!res?.ok) {
-      toast({ title: 'Save failed', description: 'Could not update your profile.' })
+      const data = res ? (((await res.json().catch(() => null)) as null | { error?: string }) ?? null) : null
+      toast({
+        title: 'Save failed',
+        description:
+          data?.error === 'exists'
+            ? 'That email, phone number, or username is already being used by another account.'
+            : 'Could not update your profile.',
+      })
       return
     }
 

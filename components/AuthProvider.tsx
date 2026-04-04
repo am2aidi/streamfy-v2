@@ -227,12 +227,12 @@ interface AuthModalProps {
 function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }: AuthModalProps) {
   const { settings } = useAppSettings()
   const t = (key: TranslationKey) => getTranslation(settings.language, key)
-  const [identifier, setIdentifier] = useState('joe.don@example.com')
+  const [identifier, setIdentifier] = useState('')
   const [signInCountryCode, setSignInCountryCode] = useState('+250')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('joe.don@example.com')
+  const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [countryCode, setCountryCode] = useState('+250')
   const [rememberMe, setRememberMe] = useState(true)
@@ -240,7 +240,7 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
   const [message, setMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [forgotOpen, setForgotOpen] = useState(false)
-  const [forgotEmail, setForgotEmail] = useState('joe.don@example.com')
+  const [forgotEmail, setForgotEmail] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -494,7 +494,7 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
                     <button
                       onClick={() => {
                         setForgotOpen(true)
-                        setForgotEmail(identifier.includes('@') ? identifier : 'joe.don@example.com')
+                        setForgotEmail(identifier.includes('@') ? identifier : '')
                       }}
                       className="rounded-xl bg-white/10 px-4 py-2.5 text-center text-base text-white hover:bg-white/15"
                     >
@@ -511,6 +511,12 @@ function AuthModal({ open, mode, reason, onClose, onModeChange, onAuthSuccess }:
                     <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="accent-[#f4a30a]" />
                     {t('rememberMe')}
                   </label>
+                  <button
+                    onClick={() => onModeChange('signup')}
+                    className="w-full rounded-xl border border-[#f4a30a]/40 bg-[#f4a30a]/10 px-4 py-2.5 text-base font-medium text-[#f4a30a] hover:bg-[#f4a30a]/15"
+                  >
+                    Create a new account
+                  </button>
                 </>
               ) : (
                 <>

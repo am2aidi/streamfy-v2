@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { allRows, asString, firstRow, runQuery } from '@/lib/server/d1'
+import { allRows, asString, firstRow, isUniqueConstraintError, runQuery } from '@/lib/server/d1'
 import type { ClientAuthUser } from '@/lib/auth-client'
 
 type UserRow = {
@@ -39,6 +39,19 @@ function normalizeUsername(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20)
 }
 
+function normalizeEmail(value?: string | null) {
+  const normalized = value?.trim().toLowerCase() || ''
+  return normalized || null
+}
+
+function normalizePhone(value?: string | null) {
+  const trimmed = value?.trim() || ''
+  if (!trimmed) return null
+  const digits = trimmed.replace(/\D/g, '')
+  if (!digits) return null
+  return trimmed.startsWith('+') ? `+${digits}` : digits
+}
+
 function mapUser(row: UserRow): ClientAuthUser {
   return {
     id: row.id,
@@ -75,6 +88,21 @@ async function ensureUserSettings(userId: string) {
   )
 }
 
+async function repairLegacyPasswordStorage() {
+  await runQuery(
+    `
+      UPDATE users
+      SET
+        password_hash = CAST(phone_verified AS TEXT),
+        phone_verified = CASE WHEN phone IS NOT NULL AND trim(phone) <> '' THEN 1 ELSE 0 END,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE (password_hash IS NULL OR CAST(password_hash AS TEXT) IN ('0', '1', ''))
+        AND typeof(phone_verified) = 'text'
+        AND length(CAST(phone_verified AS TEXT)) >= 32
+    `,
+  )
+}
+
 async function nextAvailableUsername(base: string) {
   const normalizedBase = normalizeUsername(base) || `user${Date.now().toString().slice(-5)}`
   const rows = await allRows<{ username: string | null }>(
@@ -91,6 +119,7 @@ async function nextAvailableUsername(base: string) {
 }
 
 export async function ensureSeedAdminUser() {
+  await repairLegacyPasswordStorage()
   const existing = await firstRow<{ id: string }>(
     'SELECT id FROM users WHERE lower(email) = lower(?) LIMIT 1',
     [SEEDED_ADMIN.email],
@@ -174,9 +203,7 @@ export async function signInUser(input: { identifier: string; password: string; 
   const phoneCandidate =
     identifier.includes('@')
       ? null
-      : identifier.startsWith('+')
-        ? identifier
-        : `${input.countryCode || '+250'}${identifier.replace(/\D/g, '')}`
+      : normalizePhone(identifier.startsWith('+') ? identifier : `${input.countryCode || '+250'}${identifier.replace(/\D/g, '')}`)
 
   const user = await firstRow<UserRow>(
     `
@@ -207,12 +234,13 @@ export async function signUpUser(input: {
   provider?: ClientAuthUser['provider']
 }) {
   await ensureSeedAdminUser()
-  const email = input.email?.trim().toLowerCase() || null
-  const phone = input.phone?.trim() || null
-  const username = input.username?.trim() || input.email?.split('@')[0] || input.name || 'user'
+  const email = normalizeEmail(input.email)
+  const phone = normalizePhone(input.phone)
+  const username = normalizeUsername(input.username?.trim() || input.email?.split('@')[0] || input.name || 'user')
 
   if (!email && !phone) return { ok: false as const, reason: 'missing_contact' as const }
   if (input.password.trim().length < 6) return { ok: false as const, reason: 'weak_password' as const }
+  if (!username) return { ok: false as const, reason: 'invalid' as const }
 
   const conflict = await firstRow<{ id: string; email: string | null; phone: string | null; username: string | null }>(
     `
@@ -223,7 +251,7 @@ export async function signUpUser(input: {
          OR (lower(username) = lower(?) AND ? IS NOT NULL)
       LIMIT 1
     `,
-    [email, email, phone, phone, username.trim() || null, username.trim() || null],
+    [email, email, phone, phone, username || null, username || null],
   )
 
   if (conflict) return { ok: false as const, reason: 'exists' as const }
@@ -232,24 +260,31 @@ export async function signUpUser(input: {
   const safeUsername = await nextAvailableUsername(username)
   const passwordHash = await hashPasswordForStorage(input.password.trim())
 
-  await runQuery(
-    `
-      INSERT INTO users (
-        id, name, username, email, phone, provider, role, status, password_hash, email_verified, phone_verified, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, 'user', 'active', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    `,
-    [
-      userId,
-      input.name?.trim() || safeUsername,
-      safeUsername,
-      email,
-      phone,
-      input.provider || 'email',
-      email ? 1 : 0,
-      phone ? 1 : 0,
-      passwordHash,
-    ],
-  )
+  try {
+    await runQuery(
+      `
+        INSERT INTO users (
+          id, name, username, email, phone, provider, role, status, password_hash, email_verified, phone_verified, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'user', 'active', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `,
+      [
+        userId,
+        input.name?.trim() || safeUsername,
+        safeUsername,
+        email,
+        phone,
+        input.provider || 'email',
+        passwordHash,
+        email ? 1 : 0,
+        phone ? 1 : 0,
+      ],
+    )
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { ok: false as const, reason: 'exists' as const }
+    }
+    throw error
+  }
   await ensureUserSettings(userId)
 
   const created = await firstRow<UserRow>('SELECT * FROM users WHERE id = ? LIMIT 1', [userId])

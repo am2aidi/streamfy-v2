@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { allRows, asBoolean, asString, firstRow, parseJsonArray, runQuery } from '@/lib/server/d1'
+import { allRows, asBoolean, asString, firstRow, isUniqueConstraintError, parseJsonArray, runQuery } from '@/lib/server/d1'
 
 type UserSettingsRow = {
   theme: 'dark' | 'light'
@@ -59,6 +59,29 @@ const DEFAULT_SETTINGS: PersistedAppSettings = {
   pushNotifs: true,
   emailNotifs: false,
   soundEffects: true,
+}
+
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase()
+}
+
+function normalizePhone(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  const digits = trimmed.replace(/\D/g, '')
+  if (!digits) return ''
+  return trimmed.startsWith('+') ? `+${digits}` : digits
+}
+
+function normalizeUsername(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20)
+}
+
+export class UserProfileConflictError extends Error {
+  constructor(message = 'A user with that email, phone number, or username already exists.') {
+    super(message)
+    this.name = 'UserProfileConflictError'
+  }
 }
 
 async function ensureUserSettingsRow(userId: string) {
@@ -238,14 +261,48 @@ export async function saveUserProfileToDb(
   input: { fullName: string; username: string; email: string; phone: string; bio?: string; publicProfile?: boolean },
 ) {
   await ensureUserSettingsRow(userId)
-  await runQuery(
+  const username = normalizeUsername(input.username)
+  const email = normalizeEmail(input.email)
+  const phone = normalizePhone(input.phone)
+
+  if (!username || !email) {
+    throw new Error('Profile username and email are required.')
+  }
+
+  const conflict = await firstRow<{ id: string }>(
     `
-      UPDATE users
-      SET name = ?, username = ?, email = ?, phone = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
+      SELECT id
+      FROM users
+      WHERE id <> ?
+        AND (
+          lower(username) = lower(?)
+          OR lower(email) = lower(?)
+          OR (phone = ? AND ? IS NOT NULL)
+        )
+      LIMIT 1
     `,
-    [input.fullName.trim(), input.username.trim(), input.email.trim().toLowerCase(), input.phone.trim() || null, userId],
+    [userId, username, email, phone || null, phone || null],
   )
+
+  if (conflict) {
+    throw new UserProfileConflictError()
+  }
+
+  try {
+    await runQuery(
+      `
+        UPDATE users
+        SET name = ?, username = ?, email = ?, phone = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `,
+      [input.fullName.trim(), username, email, phone || null, userId],
+    )
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      throw new UserProfileConflictError()
+    }
+    throw error
+  }
 
   await runQuery(
     `
